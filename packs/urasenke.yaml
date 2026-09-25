@@ -1,0 +1,490 @@
+# chanote school pack: 裏千家 (Urasenke)
+#
+# Format
+#   id / version           pack identity; bump version to have the app re-import
+#   categories             grouping for the temae picker; `parent` nests categories
+#   temae                  each entry: id, ja (required), romaji, en, category,
+#                          defaults  = axis values prefilled when chosen (user can override)
+#                          alias_of  = this is a familiar name for another temae; the record
+#                                      stores the target as temae_id and this id as alias
+#                          modifiers = axis values applied on top of the target's defaults
+#   tana / hearth          plain lists; `parent` for grouping (e.g. daisu variants)
+#
+# Axis values (see docs/chanote-design.md §2.4)
+#   tea     koicha | usucha | tsuzuki | "-" | "?"
+#   tana    tana.<id> | "-" (運び) | "?"
+#   hearth  ro | furo | binkake | nakaoki | tsurigama | dairo | sukigi | other | "?"
+#   kinin   "-" | kinindate | kiyotsugu
+#   tsukimono  list of: koicha sumi kinin-kiyotsugu tsubokazari musubi-fukusa jikukazari kou nagekomi
+#
+# Ids are stable identifiers, never shown to users. Do not rename; archive instead.
+
+id: urasenke
+version: "2026.09.2"
+name: { ja: 裏千家, romaji: Urasenke, en: Urasenke school }
+
+categories:
+  - { id: hira,          ja: 平点前,   romaji: hiradate,        en: Basic procedures }
+  - { id: konarai,       ja: 小習,     romaji: konarai,         en: Sixteen basic studies }
+  - { id: konarai.mae8,  ja: 前八ヶ条, romaji: mae hakkajō,     en: First eight, parent: konarai }
+  - { id: konarai.ato8,  ja: 後八ヶ条, romaji: ato hakkajō,     en: Latter eight, parent: konarai }
+  - { id: sumi,          ja: 炭手前,   romaji: sumi-demae,      en: Charcoal procedures }
+  - { id: ouyou,         ja: 応用・他, romaji: ōyō,             en: Applied / seasonal }
+  - { id: chabako,       ja: 茶箱・盆略, romaji: chabako,       en: Tea box / tray procedures }
+  - { id: shikaden,      ja: 四ヶ伝,   romaji: shikaden,        en: Four transmissions }
+  - { id: okuden,        ja: 奥伝,     romaji: okuden,          en: Advanced transmissions }
+  - { id: shichijishiki, ja: 七事式,   romaji: shichiji-shiki,  en: Seven group exercises }
+  - { id: kagetsu,       ja: 花月之式, romaji: kagetsu no shiki, en: Kagetsu, parent: shichijishiki }
+
+temae:
+  # ---- 平点前 -------------------------------------------------------------
+  - id: hiradate
+    ja: 平点前
+    romaji: hiradate
+    en: Basic thin/thick tea procedure
+    category: hira
+    defaults: { tana: "-" }
+  - id: hiradate.usucha
+    ja: 薄茶点前
+    romaji: usucha temae
+    en: Basic thin tea
+    category: hira
+    alias_of: hiradate
+    modifiers: { tea: usucha }
+  - id: hiradate.koicha
+    ja: 濃茶点前
+    romaji: koicha temae
+    en: Basic thick tea
+    category: hira
+    alias_of: hiradate
+    modifiers: { tea: koicha }
+  - id: hiradate.tsuzuki
+    ja: 続き薄茶
+    romaji: tsuzuki-usucha
+    en: Thick tea followed by thin tea without leaving
+    category: hira
+    alias_of: hiradate
+    modifiers: { tea: tsuzuki }
+
+  # ---- 小習 前八ヶ条 -----------------------------------------------------
+  - id: kinindate
+    ja: 貴人点
+    romaji: kinindate
+    en: Serving a noble guest
+    category: konarai.mae8
+    alias_of: hiradate
+    modifiers: { kinin: kinindate }
+  - id: kinin-kiyotsugu
+    ja: 貴人清次
+    romaji: kinin kiyotsugu
+    en: Noble guest with accompanying guests
+    category: konarai.mae8
+    alias_of: hiradate
+    modifiers: { kinin: kiyotsugu }
+  - id: chaire-kazari
+    ja: 茶入荘
+    romaji: chaire kazari
+    en: Featured tea container
+    category: konarai.mae8
+    defaults: { tea: koicha }
+  - id: chawan-kazari
+    ja: 茶碗荘
+    romaji: chawan kazari
+    en: Featured tea bowl
+    category: konarai.mae8
+    defaults: { tea: koicha }
+  - id: chashaku-kazari
+    ja: 茶杓荘
+    romaji: chashaku kazari
+    en: Featured tea scoop
+    category: konarai.mae8
+    defaults: { tea: koicha }
+  - id: chasen-kazari
+    ja: 茶筅荘
+    romaji: chasen kazari
+    en: Featured whisk (honoring the water jar)
+    category: konarai.mae8
+    defaults: { tea: koicha }
+  - id: nagao-chaire
+    ja: 長緒茶入
+    romaji: nagao chaire
+    en: Long-corded tea container
+    category: konarai.mae8
+    defaults: { tea: koicha }
+  - id: kasane-chawan
+    ja: 重茶碗
+    romaji: kasane chawan
+    en: Stacked bowls (thick tea for many guests)
+    category: konarai.mae8
+    defaults: { tea: koicha }
+
+  # ---- 小習 後八ヶ条 -----------------------------------------------------
+  - id: tsutsumi-fukusa
+    ja: 包帛紗
+    romaji: tsutsumi fukusa
+    en: Tea container wrapped in fukusa
+    category: konarai.ato8
+    defaults: { tea: koicha }
+  - id: tsubo-kazari
+    ja: 壺荘
+    romaji: tsubo kazari
+    en: Displaying the tea-leaf jar
+    category: konarai.ato8
+    defaults: { tea: "-" }
+  - id: sumi-shomou
+    ja: 炭所望
+    romaji: sumi shomō
+    en: Guest asked to lay charcoal
+    category: konarai.ato8
+    defaults: { tea: "-" }
+  - id: hana-shomou
+    ja: 花所望
+    romaji: hana shomō
+    en: Guest asked to arrange flowers
+    category: konarai.ato8
+    defaults: { tea: "-" }
+  - id: irekodate
+    ja: 入子点
+    romaji: irekodate
+    en: Bowl carried in the water jar
+    category: konarai.ato8
+    defaults: { tea: usucha }
+  - id: bon-kougou
+    ja: 盆香合
+    romaji: bon kōgō
+    en: Incense container on a tray
+    category: konarai.ato8
+    defaults: { tea: "-" }
+  - id: jiku-kazari
+    ja: 軸荘
+    romaji: jiku kazari
+    en: Displaying the scroll
+    category: konarai.ato8
+    defaults: { tea: "-", hearth: other }
+  - id: ootsu-bukuro
+    ja: 大津袋
+    romaji: ōtsu bukuro
+    en: Tea container in an Ōtsu bag
+    category: konarai.ato8
+    defaults: { tea: koicha }
+
+  # ---- 炭手前 -------------------------------------------------------------
+  - id: shozumi
+    ja: 初炭手前
+    romaji: shozumi
+    en: First charcoal
+    category: sumi
+    defaults: { tea: "-" }
+  - id: gozumi
+    ja: 後炭手前
+    romaji: gozumi
+    en: Second charcoal
+    category: sumi
+    defaults: { tea: "-" }
+
+  # ---- 応用・他 -----------------------------------------------------------
+  - id: tsutsu-chawan
+    ja: 筒茶碗
+    romaji: tsutsu chawan
+    en: Cylindrical bowl (deep winter)
+    category: ouyou
+    defaults: { tea: usucha, hearth: ro }
+  - id: nagashidate
+    ja: 流し点
+    romaji: nagashidate
+    en: Informal side-facing procedure
+    category: ouyou
+    defaults: { tea: usucha }
+  - id: arai-chakin
+    ja: 洗い茶巾
+    romaji: arai chakin
+    en: Wet cloth in the bowl (summer)
+    category: ouyou
+    defaults: { tea: usucha, hearth: furo }
+  - id: habuta
+    ja: 葉蓋
+    romaji: habuta
+    en: Leaf lid on the water jar (summer)
+    category: ouyou
+    defaults: { tea: usucha, hearth: furo }
+  - id: meisuidate
+    ja: 名水点
+    romaji: meisuidate
+    en: Famous-water procedure
+    category: ouyou
+    defaults: { tea: koicha, hearth: furo }
+
+  # ---- 茶箱・盆略 ---------------------------------------------------------
+  - id: bonryaku
+    ja: 盆略点前
+    romaji: bonryaku
+    en: Abbreviated tray procedure
+    category: chabako
+    defaults: { tea: usucha, tana: "-", hearth: binkake }
+  - id: chitose-bon
+    ja: 千歳盆
+    romaji: chitose-bon
+    en: Chitose tray
+    category: chabako
+    defaults: { tea: usucha, tana: "-", hearth: binkake }
+  - id: unohana
+    ja: 卯の花
+    romaji: unohana
+    en: Tea box, Unohana
+    category: chabako
+    defaults: { tea: usucha, tana: "-", hearth: binkake }
+  - id: wakei
+    ja: 和敬
+    romaji: wakei
+    en: Tea box, Wakei
+    category: chabako
+    defaults: { tea: usucha, tana: "-", hearth: binkake }
+  - id: yuki
+    ja: 雪点前
+    romaji: yuki
+    en: Tea box, Snow
+    category: chabako
+    defaults: { tea: usucha, tana: "-", hearth: binkake }
+  - id: tsuki
+    ja: 月点前
+    romaji: tsuki
+    en: Tea box, Moon
+    category: chabako
+    defaults: { tea: usucha, tana: "-", hearth: binkake }
+  - id: hana
+    ja: 花点前
+    romaji: hana
+    en: Tea box, Flower
+    category: chabako
+    defaults: { tea: usucha, tana: "-", hearth: binkake }
+  - id: gosho-kago
+    ja: 御所籠
+    romaji: gosho-kago
+    en: Imperial basket
+    category: chabako
+    defaults: { tea: usucha, tana: "-", hearth: binkake }
+  - id: shikishidate
+    ja: 色紙点
+    romaji: shikishidate
+    en: Shikishi procedure (with Gosho-kago)
+    category: chabako
+    defaults: { tea: usucha, tana: "-", hearth: binkake }
+
+  # ---- 四ヶ伝 -------------------------------------------------------------
+  - id: satsubako
+    ja: 茶通箱
+    romaji: satsūbako
+    en: Two thick teas from a box
+    category: shikaden
+    defaults: { tea: koicha, tana: "-" }
+  - id: wakin
+    ja: 和巾
+    romaji: wakin
+    en: Wakin cloth
+    category: shikaden
+    defaults: { tea: koicha, tana: "-" }
+  - id: karamono
+    ja: 唐物
+    romaji: karamono
+    en: Chinese tea container
+    category: shikaden
+    defaults: { tea: koicha, tana: "-" }
+  - id: bondate
+    ja: 盆点
+    romaji: bondate
+    en: Tray procedure with karamono
+    category: shikaden
+    defaults: { tea: koicha, tana: "-" }
+  - id: dai-tenmoku
+    ja: 台天目
+    romaji: dai tenmoku
+    en: Tenmoku bowl on a stand
+    category: shikaden
+    defaults: { tea: koicha, tana: "-" }
+
+  # ---- 奥伝 ---------------------------------------------------------------
+  - id: gyo-no-gyo
+    ja: 行之行台子
+    romaji: gyō no gyō daisu
+    en: Gyō-level daisu
+    category: okuden
+    defaults: { tea: koicha, tana: tana.daisu.gyo }
+  - id: daien-no-so
+    ja: 大円之草
+    romaji: daien no sō
+    en: Daien tray, sō level
+    category: okuden
+    defaults: { tea: koicha }
+  - id: shin-no-gyo
+    ja: 真之行台子
+    romaji: shin no gyō daisu
+    en: Shin-level daisu
+    category: okuden
+    defaults: { tea: koicha, tana: tana.daisu.shin }
+  - id: daien-no-shin
+    ja: 大円之真
+    romaji: daien no shin
+    en: Daien tray, shin level
+    category: okuden
+    defaults: { tea: koicha, tana: tana.daisu.shin }
+  - id: shin-no-sumi
+    ja: 真之炭
+    romaji: shin no sumi
+    en: Shin-level charcoal
+    category: okuden
+    defaults: { tea: "-", tana: tana.daisu.shin }
+
+  # ---- 七事式 -------------------------------------------------------------
+  - id: kagetsu
+    ja: 花月之式
+    romaji: kagetsu no shiki
+    en: Kagetsu (lots decide roles)
+    category: kagetsu
+    defaults: { tea: usucha, tana: "-" }
+  - id: kagetsu.hira
+    ja: 平花月
+    romaji: hira kagetsu
+    en: Plain kagetsu
+    category: kagetsu
+    alias_of: kagetsu
+    modifiers: {}
+  - id: kagetsu.koicha
+    ja: 濃茶付花月
+    romaji: koicha-tsuki kagetsu
+    category: kagetsu
+    alias_of: kagetsu
+    modifiers: { tea: koicha, tsukimono: [koicha] }
+  - id: kagetsu.sumi
+    ja: 炭付花月
+    romaji: sumi-tsuki kagetsu
+    category: kagetsu
+    alias_of: kagetsu
+    modifiers: { tsukimono: [sumi] }
+  - id: kagetsu.kinin-kiyotsugu
+    ja: 貴人清次花月
+    romaji: kinin kiyotsugu kagetsu
+    category: kagetsu
+    alias_of: kagetsu
+    modifiers: { kinin: kiyotsugu, tsukimono: [kinin-kiyotsugu] }
+  - id: kagetsu.tsubokazari
+    ja: 壺荘付花月
+    romaji: tsubokazari-tsuki kagetsu
+    category: kagetsu
+    alias_of: kagetsu
+    modifiers: { tsukimono: [tsubokazari] }
+  - id: kagetsu.musubi-fukusa
+    ja: 結び帛紗花月
+    romaji: musubi-fukusa kagetsu
+    category: kagetsu
+    alias_of: kagetsu
+    modifiers: { tsukimono: [musubi-fukusa] }
+  - id: kagetsu.jikukazari
+    ja: 軸荘付花月
+    romaji: jikukazari-tsuki kagetsu
+    category: kagetsu
+    alias_of: kagetsu
+    modifiers: { tsukimono: [jikukazari] }
+  - id: kagetsu.kou
+    ja: 香付花月
+    romaji: kō-tsuki kagetsu
+    category: kagetsu
+    alias_of: kagetsu
+    modifiers: { tsukimono: [kou] }
+  - id: kagetsu.nagekomi
+    ja: 投げ込み花月
+    romaji: nagekomi kagetsu
+    category: kagetsu
+    alias_of: kagetsu
+    modifiers: { tsukimono: [nagekomi] }
+  - id: kagetsu.yojohan
+    ja: 四畳半花月
+    romaji: yojōhan kagetsu
+    category: kagetsu
+    alias_of: kagetsu
+    modifiers: { room: yojohan }
+  - id: shaza
+    ja: 且座
+    romaji: shaza
+    en: Shaza (incense, flowers, charcoal, tea by turns)
+    category: shichijishiki
+    defaults: { tana: "-" }
+  - id: mawari-bana
+    ja: 廻り花
+    romaji: mawari-bana
+    en: Flowers by turns
+    category: shichijishiki
+    defaults: { tea: "-" }
+  - id: mawari-zumi
+    ja: 廻り炭
+    romaji: mawari-zumi
+    en: Charcoal by turns
+    category: shichijishiki
+    defaults: { tea: "-", hearth: ro }
+  - id: ichinisan
+    ja: 一二三之式
+    romaji: ichi ni san no shiki
+    en: Scoring the host's procedure
+    category: shichijishiki
+    defaults: { tea: koicha }
+  - id: kazucha
+    ja: 員茶
+    romaji: kazucha
+    en: Tea for many by turns
+    category: shichijishiki
+    defaults: { tea: usucha }
+  - id: chakabuki
+    ja: 茶カブキ
+    romaji: chakabuki
+    en: Tea tasting game
+    category: shichijishiki
+    defaults: { tea: koicha }
+
+tana:
+  # Starting list — please review/extend in the app's list editor. Ids follow the romaji.
+  - { id: daisu,          ja: 台子,       romaji: daisu,          en: Daisu (large stand, group) }
+  - { id: daisu.shin,     ja: 真台子,     romaji: shin daisu,     parent: daisu }
+  - { id: daisu.gyo,      ja: 竹台子,     romaji: take daisu,     parent: daisu }
+  - { id: daisu.korai,    ja: 高麗台子,   romaji: kōrai daisu,    parent: daisu }
+  - { id: nagaita,        ja: 長板,       romaji: nagaita,        en: Long board (group) }
+  - { id: nagaita.so,     ja: 長板総荘,   romaji: nagaita sōkazari, parent: nagaita }
+  - { id: nagaita.futatsu, ja: 長板二つ置, romaji: nagaita futatsu-oki, parent: nagaita }
+  - { id: oodana,         ja: 大棚,       romaji: ōdana,          en: Large shelves (group) }
+  - { id: joo-dana,       ja: 紹鴎棚,     romaji: jōō-dana,       parent: oodana }
+  - { id: shino-dana,     ja: 志野棚,     romaji: shino-dana,     parent: oodana }
+  - { id: kodana,         ja: 小棚,       romaji: kodana,         en: Small shelves (group) }
+  - { id: marujoku,       ja: 丸卓,       romaji: marujoku,       parent: kodana }
+  - { id: kuwa-kojoku,    ja: 桑小卓,     romaji: kuwa kojoku,    parent: kodana }
+  - { id: koko-dana,      ja: 更好棚,     romaji: kōkō-dana,      parent: kodana }
+  - { id: yoshino-dana,   ja: 吉野棚,     romaji: yoshino-dana,   parent: kodana }
+  - { id: hosei-dana,     ja: 抱清棚,     romaji: hōsei-dana,     parent: kodana }
+  - { id: tabi-dansu,     ja: 旅箪笥,     romaji: tabi-dansu,     parent: kodana }
+  - { id: mikimachi-dana, ja: 三木町棚,   romaji: mikimachi-dana, parent: kodana }
+  - { id: enyu-dana,      ja: 円融棚,     romaji: en'yū-dana,     parent: kodana }
+  - { id: yamazato-dana,  ja: 山里棚,     romaji: yamazato-dana,  parent: kodana }
+  - { id: gogyo-dana,     ja: 五行棚,     romaji: gogyō-dana,     parent: kodana }
+  - { id: unryu-dana,     ja: 雲龍棚,     romaji: unryū-dana,     parent: kodana }
+  - { id: kan-un-dana,    ja: 寒雲棚,     romaji: kan'un-dana,    parent: kodana }
+  - { id: yoho-dana,      ja: 四方棚,     romaji: yohō-dana,      parent: kodana }
+  - { id: itomaki-dana,   ja: 糸巻棚,     romaji: itomaki-dana,   parent: kodana }
+  - { id: tsurube,        ja: 釣瓶,       romaji: tsurube,        en: Well-bucket water jar (no shelf) }
+
+hearth:
+  - { id: ro,        ja: 炉,     romaji: ro,        en: Sunken hearth (Nov–Apr) }
+  - { id: furo,      ja: 風炉,   romaji: furo,      en: Brazier (May–Oct) }
+  - { id: binkake,   ja: 瓶掛,   romaji: binkake,   en: Small brazier for tea box / tray }
+  - { id: nakaoki,   ja: 中置,   romaji: nakaoki,   en: Brazier placed centrally (Oct) }
+  - { id: tsurigama, ja: 釣り釜, romaji: tsurigama, en: Hanging kettle (Mar) }
+  - { id: dairo,     ja: 大炉,   romaji: dairo,     en: Large hearth (Feb) }
+  - { id: sukigi,    ja: 透木釜, romaji: sukigi-gama, en: Kettle on wooden supports (Apr) }
+  - { id: other,     ja: 他,     romaji: sono ta,   en: Other / not applicable }
+
+# Utensil categories. Individual utensils are added by the user in the list editor.
+tool_categories:
+  - { id: chawan,    ja: 茶碗,   romaji: chawan,     en: Tea bowl }
+  - { id: usuki,     ja: 薄器,   romaji: usuki,      en: Thin-tea container (natsume etc.) }
+  - { id: koichaki,  ja: 濃茶器, romaji: koichaki,   en: Thick-tea container (chaire) }
+  - { id: shifuku,   ja: 仕覆,   romaji: shifuku,    en: Brocade pouch }
+  - { id: chashaku,  ja: 茶杓,   romaji: chashaku,   en: Tea scoop }
+  - { id: mizusashi, ja: 水指,   romaji: mizusashi,  en: Fresh-water jar }
+  - { id: mizutsugi, ja: 水次,   romaji: mizutsugi,  en: Water pitcher }
+  - { id: other,     ja: その他, romaji: sono ta,    en: Other }

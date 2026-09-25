@@ -1,0 +1,306 @@
+// In-memory stand-in for the Rust backend, used only when running `npm run dev`
+// in a plain browser. Enough to click through the UI; not a faithful copy.
+
+import type { Attachment, CoverageRow, CrossCell, MonthlyRow, Session, SessionSummary, Vocab } from "./types";
+
+const attachments: Attachment[] = [];
+const profiles = { profiles: [{ id: "default", name: "Ken" }, { id: "jasmin", name: "Jasmin" }], current: "default", ask_on_start: false };
+let nextAtt = 1;
+const AXES = ["temae", "alias", "hearth", "hearth_group", "tana", "tea", "katte", "room", "kinin", "host", "teacher", "place", "my_role", "year", "session_kind"];
+function hg(h: string | null) { return h === "ro" || h === "dairo" || h === "tsurigama" || h === "sukigi" ? "ro" : h === "furo" || h === "nakaoki" ? "furo" : "other"; }
+function rg(r: string | null) { return r === "teishu" ? "host" : r == null || r === "-" ? "absent" : "other"; }
+// 1x1 grey png
+const TINY = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkqAcAAIUAgUW0RjgAAAAASUVORK5CYII=";
+
+const vocab: Vocab[] = [
+  v("school.urasenke", "school", "裏千家", "Urasenke"),
+  v("temae-cat.hira", "temae-cat", "平点前", "hiradate"),
+  v("temae-cat.shikaden", "temae-cat", "四ヶ伝", "shikaden"),
+  v("temae-cat.okuden", "temae-cat", "奥伝", "okuden"),
+  v("temae-cat.kagetsu", "temae-cat", "花月之式", "kagetsu"),
+  { ...v("temae.hiradate", "temae", "平点前", "hiradate"), parent_id: "temae-cat.hira", meta: { category: "hira", defaults: { tana: "-" } } },
+  { ...v("temae.hiradate.koicha", "temae", "濃茶点前", "koicha temae"), parent_id: "temae-cat.hira", meta: { alias_of: "temae.hiradate", modifiers: { tea: "koicha" } } },
+  { ...v("temae.karamono", "temae", "唐物", "karamono"), parent_id: "temae-cat.shikaden", meta: { category: "shikaden", defaults: { tea: "koicha", tana: "-" } } },
+  { ...v("temae.shin-no-gyo", "temae", "真之行台子", "shin no gyō daisu"), parent_id: "temae-cat.okuden", meta: { category: "okuden", defaults: { tea: "koicha", tana: "tana.daisu.shin" } } },
+  { ...v("temae.kagetsu", "temae", "花月之式", "kagetsu no shiki"), parent_id: "temae-cat.kagetsu", meta: { category: "kagetsu", defaults: { tea: "usucha", tana: "-" } } },
+  { ...v("temae.kagetsu.koicha", "temae", "濃茶付花月", "koicha-tsuki kagetsu"), parent_id: "temae-cat.kagetsu", meta: { alias_of: "temae.kagetsu", modifiers: { tea: "koicha", tsukimono: ["koicha"] } } },
+  v("tana.daisu.shin", "tana", "真台子", "shin daisu"),
+  v("tana.nagaita", "tana", "長板", "nagaita"),
+  v("hearth.ro", "hearth", "炉", "ro"),
+  v("hearth.furo", "hearth", "風炉", "furo"),
+  { ...v("person.self", "person", "自分", "jibun"), meta: { is_self: true } },
+  { ...v("person.noriko", "person", "則子先生", "Noriko-sensei"), meta: { teacher: true } },
+  v("person.izumi", "person", "出水さん", "Izumi-san"),
+  v("place.yasu-an", "place", "八洲庵", "Yasu-an"),
+  v("place.hanamachi-an", "place", "華待庵", "Hanamachi-an"),
+];
+
+function v(id: string, kind: string, ja: string, romaji?: string): Vocab {
+  return { id, kind, ja, romaji: romaji ?? null, en: null, parent_id: null, sort: null, origin: id.startsWith("person") || id.startsWith("place") ? "user" : "pack:urasenke", archived: false, meta: null };
+}
+
+const sessions = new Map<number, Session>();
+let nextId = 1;
+const settings = new Map<string, string>();
+
+sessions.set(nextId++, {
+  id: 1, date: "2026-05-10", date_prec: "day", place_id: "place.yasu-an", place_note: null,
+  kind: "koshukai", online: false, note: null,
+  persons: [{ person_id: "person.noriko", name_free: null, role: "teacher" }],
+  temae: [
+    { ...blank(), temae_id: "temae.shin-no-gyo", host_id: "person.izumi", teacher_id: "person.noriko", my_role: "kyaku", hearth: "furo", tea: "koicha", tana_id: "tana.daisu.shin" },
+    { ...blank(), temae_id: "temae.shin-no-gyo", host_id: "person.self", teacher_id: "person.noriko", my_role: "teishu", hearth: "furo", tea: "koicha", tana_id: "tana.daisu.shin" },
+  ],
+});
+
+for (const [date, place, online, items] of [
+  ["2025-02-08", "place.yasu-an", false, [["temae.karamono", "ro", "teishu", "person.self", "koicha"], ["temae.kagetsu", "ro", "kyaku", "person.izumi", "usucha"]]],
+  ["2025-07-12", "place.hanamachi-an", true, [["temae.hiradate", "furo", "teishu", "person.self", "koicha"]]],
+  ["2026-01-17", "place.yasu-an", false, [["temae.kagetsu", "ro", "teishu", "person.self", "koicha"]]],
+] as const) {
+  sessions.set(nextId, {
+    id: nextId, date, date_prec: "day", place_id: place, place_note: null, kind: "keiko", online, note: null,
+    persons: [{ person_id: "person.noriko", name_free: null, role: "teacher" }],
+    temae: items.map(([temae_id, hearth, my_role, host_id, tea]) => ({
+      ...blank(), temae_id, hearth, my_role, host_id, tea,
+      temae_alias_id: temae_id === "temae.kagetsu" && tea === "koicha" ? "temae.kagetsu.koicha" : temae_id === "temae.hiradate" ? "temae.hiradate.koicha" : null,
+    })),
+  });
+  nextId++;
+}
+
+function blank() {
+  return { id: null, time: null, temae_id: null, temae_alias_id: null, temae_free: null, host_id: null, host_free: null, teacher_id: null, my_role: null, my_role_note: null, my_seat: null, hearth: null, katte: null, room: null, tea: null, tana_id: null, tana_free: null, kinin: null, note: null, persons: [], tsukimono: [], tools: [] };
+}
+
+function resolve(id: string) {
+  const c = vocab.find((x) => x.id === id);
+  if (!c) throw new Error(`unknown temae ${id}`);
+  const meta = (c.meta ?? {}) as Record<string, unknown>;
+  if (typeof meta.alias_of === "string") {
+    const m = vocab.find((x) => x.id === meta.alias_of);
+    const base = ((m?.meta as Record<string, unknown>)?.defaults ?? {}) as object;
+    return { temae_id: meta.alias_of, temae_alias_id: id, axes: { ...base, ...(meta.modifiers as object) } };
+  }
+  return { temae_id: id, temae_alias_id: null, axes: { ...((meta.defaults ?? {}) as object) } };
+}
+
+export async function invoke<T>(cmd: string, args: Record<string, unknown> = {}): Promise<T> {
+  await new Promise((r) => setTimeout(r, 10));
+  switch (cmd) {
+    case "app_info":
+      return { version: "0.2.0-mock", db_path: "(in-memory mock)", schema_version: 2, self_person_id: "person.self", profile: profiles.current } as T;
+    case "profile_list":
+      return structuredClone(profiles) as T;
+    case "profile_create": {
+      const name = (args.input as { name: string }).name;
+      const p = { id: name.toLowerCase().replace(/[^a-z0-9]+/g, "-") || "user", name };
+      profiles.profiles.push(p);
+      return p as T;
+    }
+    case "profile_rename": {
+      const p = profiles.profiles.find((x) => x.id === args.id); if (p) p.name = args.name as string;
+      return undefined as T;
+    }
+    case "profile_set_ask":
+      profiles.ask_on_start = args.ask as boolean;
+      return undefined as T;
+    case "profile_switch":
+      profiles.current = args.id as string;
+      return undefined as T;
+    case "vocab_ranking": {
+      const score = new Map<string, { n: number; last: string | null; score: number }>();
+      const bump = (id: string | null, d: string | null) => {
+        if (!id) return;
+        const s = score.get(id) ?? { n: 0, last: null, score: 0 };
+        s.n++; if (d && (!s.last || d > s.last)) s.last = d;
+        s.score += d ? Math.exp(-((Date.now() - Date.parse(d)) / 86400e3) / 365 * Math.LN2) : 0.25;
+        score.set(id, s);
+      };
+      for (const s of sessions.values()) {
+        if (args.kind === "place") bump(s.place_id, s.date);
+        for (const t of s.temae) {
+          if (args.kind === "person") { bump(t.host_id, s.date); bump(t.teacher_id, s.date); for (const p of t.persons) bump(p.person_id, s.date); }
+          if (args.kind === "temae") bump(t.temae_alias_id ?? t.temae_id, s.date);
+          if (args.kind === "tana") bump(t.tana_id, s.date);
+        }
+        if (args.kind === "person") for (const p of s.persons) bump(p.person_id, s.date);
+      }
+      return [...score.entries()].map(([id, v]) => ({ id, score: v.score, n: v.n, last_date: v.last })).sort((a, b) => b.score - a.score) as T;
+    }
+    case "stats_by": {
+      const m = new Map<string, { n_sessions: Set<number>; n_host: number; n_other: number; first: string | null; last: string | null }>();
+      const add = (k: string | null, sid: number, d: string | null, host: number, oth: number) => {
+        if (!k) return;
+        const r = m.get(k) ?? { n_sessions: new Set(), n_host: 0, n_other: 0, first: null, last: null };
+        r.n_sessions.add(sid); r.n_host += host; r.n_other += oth;
+        if (d) { if (!r.first || d < r.first) r.first = d; if (!r.last || d > r.last) r.last = d; }
+        m.set(k, r);
+      };
+      for (const s of sessions.values()) for (const t of s.temae) {
+        const host = t.my_role === "teishu" ? 1 : 0, oth = t.my_role && t.my_role !== "teishu" && t.my_role !== "-" ? 1 : 0;
+        switch (args.dimension) {
+          case "teacher": add(t.teacher_id ?? s.persons.find((p) => p.role === "teacher")?.person_id ?? null, s.id!, s.date, host, oth); break;
+          case "place": add(s.place_id, s.id!, s.date, host, oth); break;
+          case "host": if (t.my_role && t.my_role !== "teishu") add(t.host_id, s.id!, s.date, 0, oth); break;
+          case "with": if (t.my_role === "teishu") for (const p of t.persons) add(p.person_id ?? (p.name_free ? "free:" + p.name_free : null), s.id!, s.date, 1, 0); break;
+        }
+      }
+      return [...m.entries()].map(([key, r]) => ({ key, n_sessions: r.n_sessions.size, n_host: r.n_host, n_other: r.n_other, first_date: r.first, last_date: r.last })) as T;
+    }
+    case "setting_get":
+      return (settings.get(args.key as string) ?? null) as T;
+    case "setting_set":
+      settings.set(args.key as string, args.value as string);
+      return undefined as T;
+    case "vocab_list":
+      return vocab.filter((x) => x.kind === args.kind && (args.includeArchived || !x.archived)) as T;
+    case "vocab_upsert": {
+      const nv = args.vocab as Vocab;
+      const i = vocab.findIndex((x) => x.id === nv.id);
+      if (i >= 0) vocab[i] = nv; else vocab.push(nv);
+      return undefined as T;
+    }
+    case "vocab_archive": {
+      const x = vocab.find((x) => x.id === args.id);
+      if (x) x.archived = args.archived as boolean;
+      return undefined as T;
+    }
+    case "vocab_delete": {
+      const i = vocab.findIndex((x) => x.id === args.id);
+      if (i >= 0 && vocab[i].origin === "user") vocab.splice(i, 1); else throw new Error("pack entries cannot be deleted; archive instead");
+      return undefined as T;
+    }
+    case "vocab_usage":
+      return 0 as T;
+    case "resolve_temae":
+      return resolve(args.id as string) as T;
+    case "temae_defaults":
+      return resolve(args.id as string).axes as T;
+    case "session_list": {
+      const out: SessionSummary[] = [...sessions.values()]
+        .sort((a, b) => (b.date ?? "").localeCompare(a.date ?? "") || (b.id ?? 0) - (a.id ?? 0))
+        .map((s) => ({ id: s.id!, date: s.date, date_prec: s.date_prec, place_id: s.place_id, kind: s.kind, online: s.online, temae_count: s.temae.length }));
+      return out as T;
+    }
+    case "session_get":
+      return (sessions.get(args.id as number) ?? null) as T;
+    case "session_save": {
+      const s = structuredClone(args.session as Session);
+      const id = s.id ?? nextId++;
+      s.id = id;
+      sessions.set(id, s);
+      return id as T;
+    }
+    case "session_delete":
+      sessions.delete(args.id as number);
+      return undefined as T;
+    case "stats_coverage": {
+      const cube = new Map<string, CoverageRow>();
+      for (const s of sessions.values()) for (const t of s.temae) {
+        const role = t.my_role === "teishu" ? "host" : (t.my_role == null || t.my_role === "-") ? "absent" : "other";
+        const key = [t.temae_id, t.temae_alias_id, t.hearth, role].join("|");
+        const row = cube.get(key) ?? { temae_id: t.temae_id, alias_id: t.temae_alias_id, hearth: t.hearth, role, n: 0, n_recent: 0, first_date: null, last_date: null };
+        row.n++;
+        if (s.date) {
+          if (!row.first_date || s.date < row.first_date) row.first_date = s.date;
+          if (!row.last_date || s.date > row.last_date) row.last_date = s.date;
+          if (Date.now() - Date.parse(s.date) < 365 * 86400e3) row.n_recent++;
+        }
+        cube.set(key, row);
+      }
+      return [...cube.values()] as T;
+    }
+    case "stats_totals": {
+      const all = [...sessions.values()];
+      const t = all.flatMap((s) => s.temae);
+      const dates = all.map((s) => s.date).filter(Boolean) as string[];
+      return { sessions: all.length, temae_as_host: t.filter((x) => x.my_role === "teishu").length,
+        temae_as_other: t.filter((x) => x.my_role && x.my_role !== "teishu" && x.my_role !== "-").length,
+        first_date: dates.sort()[0] ?? null, last_date: dates.sort().at(-1) ?? null } as T;
+    }
+    case "export_write":
+      console.log("mock export", args);
+      return 0 as T;
+    case "import_read":
+      return { vocab_added: 0, vocab_skipped: 12, sessions_added: 0, sessions_skipped: 3 } as T;
+    case "stats_axes":
+      return AXES as T;
+    case "stats_monthly": {
+      const cube = new Map<string, MonthlyRow>();
+      for (const s of sessions.values()) {
+        if (!s.date) continue;
+        const seen = new Set<string>();
+        for (const t of s.temae) {
+          const key = [s.date.slice(0, 7), hg(t.hearth), rg(t.my_role)].join("|");
+          const row = cube.get(key) ?? { month: s.date.slice(0, 7), hearth: hg(t.hearth), role: rg(t.my_role), n_temae: 0, n_sessions: 0 };
+          row.n_temae++;
+          if (!seen.has(key)) { row.n_sessions++; seen.add(key); }
+          cube.set(key, row);
+        }
+      }
+      return [...cube.values()].sort((a, b) => a.month.localeCompare(b.month)) as T;
+    }
+    case "stats_cross": {
+      const pick = (ax: string, s: Session, t: Session["temae"][number]): string | null => {
+        switch (ax) {
+          case "temae": return t.temae_id; case "alias": return t.temae_alias_id ?? t.temae_id;
+          case "hearth": return t.hearth; case "hearth_group": return hg(t.hearth); case "tana": return t.tana_id;
+          case "tea": return t.tea; case "katte": return t.katte; case "room": return t.room; case "kinin": return t.kinin;
+          case "host": return t.host_id; case "teacher": return t.teacher_id ?? s.persons.find((p) => p.role === "teacher")?.person_id ?? null;
+          case "place": return s.place_id; case "my_role": return t.my_role; case "year": return s.date?.slice(0, 4) ?? null;
+          case "session_kind": return s.kind; default: return null;
+        }
+      };
+      const cube = new Map<string, CrossCell>();
+      for (const s of sessions.values()) for (const t of s.temae) {
+        if (args.hostOnly && t.my_role !== "teishu") continue;
+        const r = pick(args.rowAxis as string, s, t), c = pick(args.colAxis as string, s, t);
+        const key = `${r}|${c}`;
+        const cell = cube.get(key) ?? { row: r, col: c, n: 0, last_date: null };
+        cell.n++;
+        if (s.date && (!cell.last_date || s.date > cell.last_date)) cell.last_date = s.date;
+        cube.set(key, cell);
+      }
+      return [...cube.values()] as T;
+    }
+    case "attachment_add": {
+      const out: Attachment[] = [];
+      for (const p of args.paths as string[]) {
+        const a = { id: nextAtt++, session_id: args.sessionId as number, temae_id: null, path: `attachments/2026/att-${nextAtt}.jpg`, caption: p.split("/").pop() ?? null, created_at: new Date().toISOString() };
+        attachments.push(a); out.push(a);
+      }
+      return out as T;
+    }
+    case "attachment_list":
+      return attachments.filter((a) => a.session_id === args.sessionId) as T;
+    case "attachment_thumb":
+      return TINY as T;
+    case "attachment_caption": {
+      const a = attachments.find((x) => x.id === args.id); if (a) a.caption = args.caption as string | null;
+      return undefined as T;
+    }
+    case "attachment_delete": {
+      const i = attachments.findIndex((x) => x.id === args.id); if (i >= 0) attachments.splice(i, 1);
+      return undefined as T;
+    }
+    case "attachment_path":
+      return null as T;
+    case "attachment_counts": {
+      const m = new Map<number, number>();
+      for (const a of attachments) if (a.session_id != null) m.set(a.session_id, (m.get(a.session_id) ?? 0) + 1);
+      return [...m.entries()] as T;
+    }
+    case "backup_write":
+      return undefined as T;
+    case "backup_zip":
+      return 3 as T;
+    case "backup_restore":
+      return 3 as T;
+    case "app_restart":
+      location.reload();
+      return undefined as T;
+    default:
+      throw new Error(`mock: unknown command ${cmd}`);
+  }
+}
