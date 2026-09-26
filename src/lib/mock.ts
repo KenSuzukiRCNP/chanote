@@ -2,9 +2,10 @@
 // in a plain browser. Enough to click through the UI; not a faithful copy.
 
 import type { Attachment, CoverageRow, CrossCell, MonthlyRow, Session, SessionSummary, Vocab } from "./types";
+import sample from "../../samples/sample-data.json";
 
 const attachments: Attachment[] = [];
-const profiles = { profiles: [{ id: "default", name: "Ken" }, { id: "jasmin", name: "Jasmin" }], current: "default", ask_on_start: false };
+const profiles = { profiles: [{ id: "default", name: "Me" }, { id: "anna", name: "Anna" }], current: "default", ask_on_start: false };
 let nextAtt = 1;
 const AXES = ["temae", "alias", "hearth", "hearth_group", "tana", "tea", "katte", "room", "kinin", "host", "teacher", "place", "my_role", "year", "session_kind"];
 function hg(h: string | null) { return h === "ro" || h === "dairo" || h === "tsurigama" || h === "sukigi" ? "ro" : h === "furo" || h === "nakaoki" ? "furo" : "other"; }
@@ -12,61 +13,15 @@ function rg(r: string | null) { return r === "teishu" ? "host" : r == null || r 
 // 1x1 grey png
 const TINY = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkqAcAAIUAgUW0RjgAAAAASUVORK5CYII=";
 
-const vocab: Vocab[] = [
-  v("school.urasenke", "school", "裏千家", "Urasenke"),
-  v("temae-cat.hira", "temae-cat", "平点前", "hiradate"),
-  v("temae-cat.shikaden", "temae-cat", "四ヶ伝", "shikaden"),
-  v("temae-cat.okuden", "temae-cat", "奥伝", "okuden"),
-  v("temae-cat.kagetsu", "temae-cat", "花月之式", "kagetsu"),
-  { ...v("temae.hiradate", "temae", "平点前", "hiradate"), parent_id: "temae-cat.hira", meta: { category: "hira", defaults: { tana: "-" } } },
-  { ...v("temae.hiradate.koicha", "temae", "濃茶点前", "koicha temae"), parent_id: "temae-cat.hira", meta: { alias_of: "temae.hiradate", modifiers: { tea: "koicha" } } },
-  { ...v("temae.karamono", "temae", "唐物", "karamono"), parent_id: "temae-cat.shikaden", meta: { category: "shikaden", defaults: { tea: "koicha", tana: "-" } } },
-  { ...v("temae.shin-no-gyo", "temae", "真之行台子", "shin no gyō daisu"), parent_id: "temae-cat.okuden", meta: { category: "okuden", defaults: { tea: "koicha", tana: "tana.daisu.shin" } } },
-  { ...v("temae.kagetsu", "temae", "花月之式", "kagetsu no shiki"), parent_id: "temae-cat.kagetsu", meta: { category: "kagetsu", defaults: { tea: "usucha", tana: "-" } } },
-  { ...v("temae.kagetsu.koicha", "temae", "濃茶付花月", "koicha-tsuki kagetsu"), parent_id: "temae-cat.kagetsu", meta: { alias_of: "temae.kagetsu", modifiers: { tea: "koicha", tsukimono: ["koicha"] } } },
-  v("tana.daisu.shin", "tana", "真台子", "shin daisu"),
-  v("tana.nagaita", "tana", "長板", "nagaita"),
-  v("hearth.ro", "hearth", "炉", "ro"),
-  v("hearth.furo", "hearth", "風炉", "furo"),
-  { ...v("person.self", "person", "自分", "jibun"), meta: { is_self: true } },
-  { ...v("person.noriko", "person", "則子先生", "Noriko-sensei"), meta: { teacher: true } },
-  v("person.izumi", "person", "出水さん", "Izumi-san"),
-  v("place.yasu-an", "place", "八洲庵", "Yasu-an"),
-  v("place.hanamachi-an", "place", "華待庵", "Hanamachi-an"),
-];
-
-function v(id: string, kind: string, ja: string, romaji?: string): Vocab {
-  return { id, kind, ja, romaji: romaji ?? null, en: null, parent_id: null, sort: null, origin: id.startsWith("person") || id.startsWith("place") ? "user" : "pack:urasenke", archived: false, meta: null };
-}
-
+// Vocabulary and sessions come from the bundled sample dataset (fictional).
+const vocab: Vocab[] = structuredClone(sample.vocab as Vocab[]);
 const sessions = new Map<number, Session>();
 let nextId = 1;
 const settings = new Map<string, string>();
-
-sessions.set(nextId++, {
-  id: 1, date: "2026-05-10", date_prec: "day", place_id: "place.yasu-an", place_note: null,
-  kind: "koshukai", online: false, note: null,
-  persons: [{ person_id: "person.noriko", name_free: null, role: "teacher" }],
-  temae: [
-    { ...blank(), temae_id: "temae.shin-no-gyo", host_id: "person.izumi", teacher_id: "person.noriko", my_role: "kyaku", hearth: "furo", tea: "koicha", tana_id: "tana.daisu.shin" },
-    { ...blank(), temae_id: "temae.shin-no-gyo", host_id: "person.self", teacher_id: "person.noriko", my_role: "teishu", hearth: "furo", tea: "koicha", tana_id: "tana.daisu.shin" },
-  ],
-});
-
-for (const [date, place, online, items] of [
-  ["2025-02-08", "place.yasu-an", false, [["temae.karamono", "ro", "teishu", "person.self", "koicha"], ["temae.kagetsu", "ro", "kyaku", "person.izumi", "usucha"]]],
-  ["2025-07-12", "place.hanamachi-an", true, [["temae.hiradate", "furo", "teishu", "person.self", "koicha"]]],
-  ["2026-01-17", "place.yasu-an", false, [["temae.kagetsu", "ro", "teishu", "person.self", "koicha"]]],
-] as const) {
-  sessions.set(nextId, {
-    id: nextId, date, date_prec: "day", place_id: place, place_note: null, kind: "keiko", online, note: null,
-    persons: [{ person_id: "person.noriko", name_free: null, role: "teacher" }],
-    temae: items.map(([temae_id, hearth, my_role, host_id, tea]) => ({
-      ...blank(), temae_id, hearth, my_role, host_id, tea,
-      temae_alias_id: temae_id === "temae.kagetsu" && tea === "koicha" ? "temae.kagetsu.koicha" : temae_id === "temae.hiradate" ? "temae.hiradate.koicha" : null,
-    })),
-  });
-  nextId++;
+for (const s of sample.sessions as unknown as Session[]) {
+  const copy = structuredClone(s);
+  copy.id = nextId;
+  sessions.set(nextId++, copy);
 }
 
 function blank() {

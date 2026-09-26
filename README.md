@@ -1,129 +1,93 @@
 # chanote
 
-茶道のお稽古を記録するデスクトップアプリ。
-A desktop app for keeping a tea-ceremony (茶道) practice log.
+**A practice diary for the Japanese tea ceremony (chadō).**
+日本語版は [README.ja.md](README.ja.md) をご覧ください。
 
-- 日々のお稽古を「日付・場所・先生」+「点前ごとの行(点前・亭主・自分の役割)」で記録
-- 過去の記録も遡って入力・修正。日付が月までしか分からない、棚が不明、といった曖昧さをそのまま残せる
-- 裏千家の点前一覧を内蔵。自分の呼び名(「長板濃茶」など)も登録できる
-- データは 1 つの SQLite ファイル。外部サービスなし
-- 日本語 / English UI。茶道用語は日本語・ローマ字・併記を選択
+You practise every week. You do a temae, you watch others, you sit as a guest, a teacher
+corrects something. Months later you cannot remember when you last did *Karamono* with a
+ro hearth, which shelf you used, or who was main guest that day. chanote keeps that diary
+for you and turns it into something you can look back on.
 
-設計の詳細は [docs/chanote-design.md](docs/chanote-design.md) を参照。
+<p align="center">
+  <img src="docs/screenshots/home.png" width="49%" alt="Practice records">
+  <img src="docs/screenshots/stats-coverage.png" width="49%" alt="Coverage statistics">
+</p>
 
-## Status
+## What it does
 
-Phase 3 まで — 記録の追加/編集/一覧(参加者・席順・道具・付物・写真)、リスト編集(呼び名の登録を含む)、
-統計(カバレッジ表・久しくやっていない点前・時系列・クロス表)、JSON/CSV エクスポート、JSON 再読込、バックアップ。
-写真込みの zip バックアップと復元、HEIC 取り込み、配布パッケージ(GitHub Actions)、
-複数人で使うプロファイル、直近重視の頻度ソート、分類・先生・場所・人別の統計、道具の分類とメモ。
-公開手順は [docs/PUBLISHING.md](docs/PUBLISHING.md)、ロードマップは設計書 §8。
+**Records that look like your notebook.** One entry per practice day: date, place, teacher,
+and one line per temae — the procedure, who was host, and what *you* did (host, main guest,
+guest, assistant, or just watching). Add as much or as little as you remember: hearth,
+shelf, thick or thin tea, orientation, room, seating order, utensils, a note, photos.
+A date can be "sometime in March 2019"; a shelf can be "there was one, I forget which".
 
-## 使う(macOS)
+**Your own names for things.** "Nagaita koicha" or "usucha with the travel chest" — register
+the names you actually use and chanote records them as the underlying procedure plus its
+settings, so statistics still add up.
 
-[Releases](../../releases) から自分の Mac に合う `.dmg` をダウンロードします
-(`aarch64` = Apple Silicon / M1 以降、`x64` = Intel)。開いて `chanote.app` を
-「アプリケーション」フォルダへドラッグしてください。
+**Statistics that answer real questions.**
+- *Coverage* — every procedure in the school's curriculum, how often you have done it, when
+  last, grouped by category (konarai, shikaden, okuden …) with a progress bar per category.
+- *Not done recently* — what to ask your teacher for next, filtered to the current season.
+- *Timeline* — monthly practice by ro / furo season.
+- *Cross tables* — temae × shelf, temae × hearth, place × teacher, anything × anything.
+- *People and places* — by teacher, by place, whose temae you watched, who sat with you.
 
-初回だけ、右クリック(control+クリック)→「開く」→「開く」で起動します。
-これは配布物に Apple の署名を付けていないためで、2回目以降は普通にダブルクリックで開けます。
-「壊れているため開けません」と出る場合はターミナルで次を一度実行してください:
+<p align="center">
+  <img src="docs/screenshots/stats-timeline.png" width="49%" alt="Timeline">
+  <img src="docs/screenshots/stats-cross.png" width="49%" alt="Cross table">
+</p>
 
-```sh
-xattr -cr /Applications/chanote.app
-```
+**Utensils with a memory.** Categories (tea bowl, thin-tea container, chaire, shifuku,
+scoop, water jar, pitcher), a free note for provenance and box inscriptions, and pairs —
+pick a chaire and its shifuku comes along.
 
-Windows は `.exe`(インストーラ)、Linux は `.AppImage` または `.deb` を使います。
+**Yours, on your machine.** Everything lives in one SQLite file plus a photo folder on your
+computer. No account, no server, no tracking. Export to JSON (complete) or CSV (one row per
+temae, for Excel or pandas), make a zip backup with photos, restore it on another Mac.
+Several people can share one computer, each with their own diary.
 
-## 開発
+**Japanese and English.** The interface is available in both. Tea terms are shown in
+Japanese, Japanese + romaji, or romaji only, with an English gloss on hover.
 
-必要なもの: [Rust](https://rustup.rs) (stable)、Node.js 20+、Xcode Command Line Tools。
-Windows/Linux は [Tauri の前提条件](https://tauri.app/start/prerequisites/) を参照。
+## Which school?
 
-```sh
-npm install
-npm run tauri dev        # アプリを起動(初回は Rust のビルドに数分)
-npm run tauri build      # .app / .dmg を作る(src-tauri/target/release/bundle/)
-```
+The built-in list of procedures is **Urasenke** (平点前, 小習十六ヶ条, 炭手前, 茶箱, 四ヶ伝,
+奥伝, 七事式 …). It is data, not code, so if you study another school you can already
+rename, hide and add procedures in the list editor and keep a perfectly good diary.
 
-フロントエンドだけをブラウザで試す(Rust なし、データはメモリ上のモック):
+Proper support for other schools — Omotesenke, Mushakōji-senke, Edo-senke, Enshū and
+others — is planned as **school packs**: one YAML file per school that describes its
+procedures, shelves and defaults. The author practises Urasenke and does not know the
+other traditions well enough to write those files alone. If you do, **help is very
+welcome** — see [docs/school-packs.md](docs/school-packs.md) for the format; a pack is a
+few hundred lines of plain text and needs no programming.
 
-```sh
-npm run dev              # http://localhost:1420
-```
+## Install
 
-テスト:
+Download the latest release from the **[Releases](../../releases)** page.
 
-```sh
-cargo test -p chanote-core   # DB・パック・記録の往復テスト
-npm run check                # svelte-check / TypeScript
-```
+- **macOS**: open the `.dmg` and drag *chanote* into Applications. Pick `aarch64` for Apple
+  Silicon (M1 and later) or `x64` for Intel. The first time, right-click the app and choose
+  *Open* (the app is not yet signed with Apple; after that it opens normally). If macOS says
+  the app is damaged, run `xattr -cr /Applications/chanote.app` once in Terminal.
+- **Windows**: run the `.exe` installer.
+- **Linux**: use the `.AppImage` or the `.deb`.
 
-データファイルの場所: `~/Library/Application Support/jp.chanote.app/chanote.sqlite`(macOS)。
-複数人で使う場合は設定画面で「使う人」を追加すると `profiles/<名前>/` に別のデータができます。
-写真は同じフォルダの `attachments/` にコピーされます。環境変数 `CHANOTE_DB=/path/to/file.sqlite` で上書きできます。
-写真は JPEG/PNG/WebP/GIF/TIFF/BMP に対応。HEIC(iPhone)は macOS では自動で JPEG に変換して取り込みます(内蔵の `sips` を使用)。
-バックアップ(設定 → バックアップを保存)はデータベースと写真フォルダをまとめた zip で、「復元」で別の Mac にも移せます。
+Want to try it with data first? Settings → *Import JSON* → pick
+[`samples/sample-data.json`](samples/sample-data.json) (two fictional years of practice).
+Create a separate user under Settings → *Users* so the sample stays apart from your own diary.
 
-アイコン: 元画像は `assets/icon.png`(1024×1024、円の外は透明)。変更したら `npm run tauri icon assets/icon.png` で `src-tauri/icons/` を作り直します(android/ios フォルダは不要なので消してよい)。
+## Where your data is
 
-## 配布パッケージを作る
+macOS: `~/Library/Application Support/jp.chanote.app/` — `chanote.sqlite` and
+`attachments/`. Windows: `%APPDATA%\jp.chanote.app\`. Linux: `~/.local/share/jp.chanote.app/`.
+Settings → *Save backup* writes a zip of both; *Restore from backup* loads it back.
 
-### 手元で作る(まずはこれ)
+## Building from source
 
-```sh
-npm run tauri build
-```
-
-数分で `src-tauri/target/release/bundle/` に次ができます:
-
-- `macos/chanote.app` — アプリ本体
-- `dmg/chanote_0.2.0_aarch64.dmg` — 配布用ディスクイメージ(Apple Silicon でビルドした場合)
-
-Intel Mac 向けも同じ Mac で作れます(初回は `rustup target add x86_64-apple-darwin`):
-
-```sh
-npm run tauri build -- --target x86_64-apple-darwin
-```
-
-`.dmg` をそのまま渡せば、相手は上の「使う」の手順で起動できます。
-
-### GitHub Releases で自動的に作る
-
-`.github/workflows/release.yml` が入っています。`git tag v0.1.0 && git push --tags` すると
-GitHub Actions が macOS(両チップ)・Windows・Linux の全部をビルドし、下書きの Release に添付します。
-Releases ページで内容を確認して「Publish」すれば公開です。バージョン番号は
-`scripts/bump-version.sh 0.3.0` で3か所まとめて上げてからタグを打ちます。
-
-### 署名と notarize(任意)
-
-署名なしでも配れますが、上記の「右クリック→開く」が必要です。それを無くすには
-Apple Developer Program(年額)に登録し、Developer ID Application 証明書を作って、
-リポジトリの Secrets に `APPLE_CERTIFICATE`(.p12 を base64)、`APPLE_CERTIFICATE_PASSWORD`、
-`APPLE_SIGNING_IDENTITY`、`APPLE_ID`、`APPLE_PASSWORD`(App 用パスワード)、`APPLE_TEAM_ID` を
-登録します。ワークフローはそれらがあれば自動で署名と notarize を行います。
-詳細は Tauri のドキュメント「macOS Code Signing」を参照。
-
-## 構成
-
-```
-src/                  Svelte 5 + TypeScript + Tailwind のフロントエンド
-  lib/api.ts          Tauri コマンドの型付きラッパー(ブラウザではモックに切替)
-  lib/i18n.svelte.ts  UI 文字列と用語表示モード
-  routes/             画面(記録一覧・編集・統計・リスト編集・設定)
-src-tauri/            Tauri シェル(コマンド定義のみ。ロジックは持たない)
-crates/chanote-core/  SQLite スキーマ・マイグレーション・記録/語彙の操作・パック読込
-packs/urasenke.yaml   裏千家の点前・棚・炉風炉の一覧(流派パック)
-locales/              ja.json / en.json
-docs/                 設計書
-```
-
-## 流派パックを足す・直す
-
-`packs/urasenke.yaml` を編集して `version` を上げると、次回起動時に取り込まれます。
-ユーザーがアプリ内で追加した項目には触れません。他流派のパックも同じ形式で書けます
-(現状は裏千家パックのみ同梱。複数パックの切替は今後)。
+See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
-MIT
+MIT — see [LICENSE](LICENSE).

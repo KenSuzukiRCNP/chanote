@@ -151,4 +151,28 @@ mod tests {
 
         assert!(db.import_json("{\"app\":\"other\"}").is_err());
     }
+
+    /// The bundled sample data must import into a fresh app (pack already installed)
+    /// and be usable by every statistics query.
+    #[test]
+    fn sample_data_imports() {
+        const SAMPLE: &str = include_str!("../../../samples/sample-data.json");
+        let db = Db::open_in_memory().unwrap();
+        db.pack_install(&Pack::from_yaml(URASENKE_YAML).unwrap()).unwrap();
+        db.self_person_id().unwrap();
+        let rep = db.import_json(SAMPLE).unwrap();
+        assert!(rep.sessions_added > 100, "{rep:?}");
+        assert_eq!(rep.sessions_skipped, 0);
+        let f = crate::stats::StatsFilter::default();
+        assert!(db.stats_coverage(&f).unwrap().len() > 20);
+        assert!(!db.stats_monthly(&f).unwrap().is_empty());
+        assert!(!db.stats_cross("temae", "tana", true, &f).unwrap().is_empty());
+        for d in ["teacher", "place", "host", "with"] {
+            assert!(!db.stats_by(d, &f).unwrap().is_empty(), "{d}");
+        }
+        assert!(!db.vocab_ranking("person").unwrap().is_empty());
+        // importing again is a no-op
+        let rep2 = db.import_json(SAMPLE).unwrap();
+        assert_eq!(rep2.sessions_added, 0);
+    }
 }

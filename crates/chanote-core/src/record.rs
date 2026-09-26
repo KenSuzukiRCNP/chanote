@@ -235,9 +235,9 @@ mod tests {
 
     fn seed(db: &Db) {
         for (id, kind, ja) in [
-            ("place.yasu-an", "place", "八洲庵"),
-            ("person.noriko", "person", "則子先生"),
-            ("person.izumi", "person", "出水さん"),
+            ("place.shofu-an", "place", "松風庵"),
+            ("person.yamada", "person", "山田先生"),
+            ("person.sato", "person", "佐藤さん"),
             ("temae.shin-no-gyo", "temae", "真之行台子"),
         ] {
             db.vocab_upsert(&Vocab {
@@ -262,26 +262,26 @@ mod tests {
         seed(&db);
         let me = db.self_person_id().unwrap();
 
-        // 10.05.2026 八洲庵 講習会 / 真乃行台子 出水さん 則子先生 客Ken / 真乃行台子 Ken 則子先生
+        // 10.05.2026 松風庵 講習会 / 真乃行台子 佐藤さん 山田先生 客(自分) / 真乃行台子 自分 山田先生
         let s = Session {
             id: None,
             date: Some("2026-05-10".into()),
             date_prec: "day".into(),
-            place_id: Some("place.yasu-an".into()),
+            place_id: Some("place.shofu-an".into()),
             place_note: None,
             kind: "koshukai".into(),
             online: true,
             note: None,
             persons: vec![SessionPerson {
-                person_id: Some("person.noriko".into()),
+                person_id: Some("person.yamada".into()),
                 name_free: None,
                 role: "teacher".into(),
             }],
             temae: vec![
                 Temae {
                     temae_id: Some("temae.shin-no-gyo".into()),
-                    host_id: Some("person.izumi".into()),
-                    teacher_id: Some("person.noriko".into()),
+                    host_id: Some("person.sato".into()),
+                    teacher_id: Some("person.yamada".into()),
                     my_role: Some("kyaku".into()),
                     hearth: Some("furo".into()),
                     tea: Some("koicha".into()),
@@ -293,7 +293,7 @@ mod tests {
                     my_role: Some("teishu".into()),
                     hearth: Some("furo".into()),
                     persons: vec![TemaePerson {
-                        person_id: Some("person.izumi".into()),
+                        person_id: Some("person.sato".into()),
                         name_free: None,
                         role: "kyaku".into(),
                         seat: Some(1),

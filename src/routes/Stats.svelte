@@ -148,14 +148,14 @@
         {#each categorySummary as c (c.b.category?.id ?? "_")}
           <tr class="border-b border-line/60" class:text-stone-400={c.nHost === 0 && c.nOther === 0}>
             <td class="py-1">{c.b.path.map((x) => term(x)).join(" › ") || t("stats.uncategorized")}</td>
-            <td class="text-right px-2 tabular-nums">{c.done} / {c.total}</td>
+            <td class="text-right px-2 tabular-nums whitespace-nowrap">{c.done} / {c.total}</td>
             <td class="px-2">
               <div class="h-2 rounded bg-stone-100 overflow-hidden"><div class="h-full bg-matcha" style="width:{c.total ? (100 * c.done) / c.total : 0}%"></div></div>
             </td>
-            <td class="text-right px-2 tabular-nums font-medium">{c.nHost || ""}</td>
-            <td class="text-right px-2 tabular-nums text-stone-500">{c.nRecent || ""}</td>
-            <td class="text-right px-2 tabular-nums text-stone-400">{c.nOther || ""}</td>
-            <td class="text-right px-2 tabular-nums text-stone-500">{c.last ?? ""}</td>
+            <td class="text-right px-2 tabular-nums whitespace-nowrap font-medium">{c.nHost || ""}</td>
+            <td class="text-right px-2 tabular-nums whitespace-nowrap text-stone-500">{c.nRecent || ""}</td>
+            <td class="text-right px-2 tabular-nums whitespace-nowrap text-stone-400">{c.nOther || ""}</td>
+            <td class="text-right px-2 tabular-nums whitespace-nowrap text-stone-500">{c.last ?? ""}</td>
           </tr>
         {/each}
       </tbody>
@@ -170,12 +170,12 @@
             <th class="text-center py-1 font-normal px-2" colspan="2">{t("stats.hearth." + g)}</th>
           {/each}
         {:else}
-          <th class="text-right py-1 font-normal px-2">{t("stats.asHost")}</th>
-          <th class="text-right py-1 font-normal px-2">{t("stats.recent")}</th>
-          <th class="text-right py-1 font-normal px-2">{t("stats.last")}</th>
-          <th class="text-right py-1 font-normal px-2">{t("stats.ago")}</th>
+          <th class="text-right py-1 font-normal px-2 whitespace-nowrap">{t("stats.asHost")}</th>
+          <th class="text-right py-1 font-normal px-2 whitespace-nowrap">{t("stats.recent")}</th>
+          <th class="text-right py-1 font-normal px-2 whitespace-nowrap">{t("stats.last")}</th>
+          <th class="text-right py-1 font-normal px-2 whitespace-nowrap">{t("stats.ago")}</th>
         {/if}
-        <th class="text-right py-1 font-normal px-2">{t("stats.asOther")}</th>
+        <th class="text-right py-1 font-normal px-2 whitespace-nowrap">{t("stats.asOther")}</th>
       </tr>
     </thead>
     <tbody>
@@ -193,22 +193,22 @@
               <td class="py-1 px-1">
                 <span title={r.temae.en ?? undefined}>{term(r.temae)}</span>
                 {#if Object.keys(r.aliases).length}
-                  <div class="text-[11px] text-stone-400">{aliasNote(r.aliases)}</div>
+                  <div class="text-[11px] text-stone-400 max-w-md">{aliasNote(r.aliases)}</div>
                 {/if}
               </td>
               {#if split}
                 {#each groups as g}
                   {@const h = r.byHearth[g].host}
-                  <td class="text-right px-2 tabular-nums" class:font-medium={h.n > 0}>{h.n || ""}</td>
+                  <td class="text-right px-2 tabular-nums whitespace-nowrap" class:font-medium={h.n > 0}>{h.n || ""}</td>
                   <td class="text-right px-1 text-xs text-stone-400 tabular-nums">{h.last ?? ""}</td>
                 {/each}
               {:else}
-                <td class="text-right px-2 tabular-nums font-medium">{r.host.n || ""}</td>
-                <td class="text-right px-2 tabular-nums text-stone-500">{r.host.nRecent || ""}</td>
-                <td class="text-right px-2 tabular-nums text-stone-500">{r.host.last ?? ""}</td>
-                <td class="text-right px-2 tabular-nums text-stone-500">{fmtDays(daysSince(r.host.last))}</td>
+                <td class="text-right px-2 tabular-nums whitespace-nowrap font-medium">{r.host.n || ""}</td>
+                <td class="text-right px-2 tabular-nums whitespace-nowrap text-stone-500">{r.host.nRecent || ""}</td>
+                <td class="text-right px-2 tabular-nums whitespace-nowrap text-stone-500">{r.host.last ?? ""}</td>
+                <td class="text-right px-2 tabular-nums whitespace-nowrap text-stone-500">{fmtDays(daysSince(r.host.last))}</td>
               {/if}
-              <td class="text-right px-2 tabular-nums text-stone-400">{r.other.n || ""}</td>
+              <td class="text-right px-2 tabular-nums whitespace-nowrap text-stone-400">{r.other.n || ""}</td>
             </tr>
           {/each}
         {/if}
@@ -231,18 +231,18 @@
       <thead class="text-xs text-stone-500">
         <tr class="border-b border-line">
           <th class="text-left py-1 font-normal">{t("temae.temae")}</th>
-          <th class="text-right py-1 font-normal px-2">{t("stats.last")}</th>
-          <th class="text-right py-1 font-normal px-2">{t("stats.ago")}</th>
-          <th class="text-right py-1 font-normal px-2">{t("stats.asHost")}</th>
+          <th class="text-right py-1 font-normal px-2 whitespace-nowrap">{t("stats.last")}</th>
+          <th class="text-right py-1 font-normal px-2 whitespace-nowrap">{t("stats.ago")}</th>
+          <th class="text-right py-1 font-normal px-2 whitespace-nowrap">{t("stats.asHost")}</th>
         </tr>
       </thead>
       <tbody>
         {#each stale as r (r.stat.temae.id)}
           <tr class="border-b border-line/60" class:text-clay={r.days != null && r.days > 365}>
             <td class="py-1 px-1">{term(r.stat.temae)}{#if r.n === 1}<span class="ml-1 text-[10px] rounded px-1 bg-stone-100 text-stone-500">{t("stats.once")}</span>{/if}</td>
-            <td class="text-right px-2 tabular-nums">{r.last ?? ""}</td>
-            <td class="text-right px-2 tabular-nums">{fmtDays(r.days)}</td>
-            <td class="text-right px-2 tabular-nums text-stone-500">{r.n}</td>
+            <td class="text-right px-2 tabular-nums whitespace-nowrap">{r.last ?? ""}</td>
+            <td class="text-right px-2 tabular-nums whitespace-nowrap">{fmtDays(r.days)}</td>
+            <td class="text-right px-2 tabular-nums whitespace-nowrap text-stone-500">{r.n}</td>
           </tr>
         {/each}
       </tbody>
@@ -287,11 +287,11 @@
         {#each by as r (r.key)}
           <tr class="border-b border-line/60">
             <td class="py-1">{keyLabel(r.key)}</td>
-            <td class="text-right px-2 tabular-nums">{r.n_sessions}</td>
-            {#if dim !== "host"}<td class="text-right px-2 tabular-nums font-medium">{r.n_host || ""}</td>{/if}
-            {#if dim !== "with"}<td class="text-right px-2 tabular-nums text-stone-400">{r.n_other || ""}</td>{/if}
-            <td class="text-right px-2 tabular-nums text-stone-500">{r.first_date ?? ""}</td>
-            <td class="text-right px-2 tabular-nums text-stone-500">{r.last_date ?? ""}</td>
+            <td class="text-right px-2 tabular-nums whitespace-nowrap">{r.n_sessions}</td>
+            {#if dim !== "host"}<td class="text-right px-2 tabular-nums whitespace-nowrap font-medium">{r.n_host || ""}</td>{/if}
+            {#if dim !== "with"}<td class="text-right px-2 tabular-nums whitespace-nowrap text-stone-400">{r.n_other || ""}</td>{/if}
+            <td class="text-right px-2 tabular-nums whitespace-nowrap text-stone-500">{r.first_date ?? ""}</td>
+            <td class="text-right px-2 tabular-nums whitespace-nowrap text-stone-500">{r.last_date ?? ""}</td>
           </tr>
         {/each}
       </tbody>

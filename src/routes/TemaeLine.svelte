@@ -1,6 +1,6 @@
 <script lang="ts">
   // One temae as a compact line, mirroring the bullet style of the paper log:
-  //   真之行台子 風炉 出水さん 則子先生 [客]
+  //   真之行台子 風炉 佐藤さん 山田先生 [客]
   import { t, term, axisLabel } from "$lib/i18n.svelte";
   import { get, vocab } from "$lib/vocab.svelte";
   import type { Temae } from "$lib/types";

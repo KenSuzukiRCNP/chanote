@@ -22,8 +22,31 @@
     }
   }
 
-  const rowsKeys = $derived([...new Set(cells.map((c) => c.row ?? ""))].sort((a, b) => label(rowAxis, a || null).localeCompare(label(rowAxis, b || null), "ja")));
-  const colKeys = $derived([...new Set(cells.map((c) => c.col ?? ""))].sort((a, b) => label(colAxis, a || null).localeCompare(label(colAxis, b || null), "ja")));
+  // Sort keys in a natural order: pack/list order for vocabulary axes, fixed order
+  // for enum axes, alphabetical otherwise. Empty/unknown go last.
+  const FIXED: Record<string, string[]> = {
+    hearth_group: ["ro", "furo", "other"],
+    hearth: ["ro", "dairo", "tsurigama", "sukigi", "furo", "nakaoki", "binkake", "other"],
+    tea: ["koicha", "usucha", "tsuzuki", "-"],
+    katte: ["jun", "gyaku"],
+    room: ["koma", "yojohan", "hiroma"],
+    kinin: ["-", "kinindate", "kiyotsugu"],
+    my_role: ["teishu", "shokyaku", "kyaku", "hanto", "mizuya", "kengaku", "-"],
+    session_kind: ["keiko", "koshukai", "honban"],
+  };
+  const VOCAB_KIND: Record<string, string> = { temae: "temae", alias: "temae", tana: "tana", host: "person", teacher: "person", place: "place" };
+  function orderKeys(axis: string, keys: string[]): string[] {
+    const rank = (k: string): number => {
+      if (!k || k === "?") return 1e9;
+      if (FIXED[axis]) { const i = FIXED[axis].indexOf(k); return i < 0 ? 1e8 : i; }
+      const kind = VOCAB_KIND[axis];
+      if (kind) { const i = (vocab.byKind[kind] ?? []).findIndex((v) => v.id === k); return i < 0 ? 1e8 : i; }
+      return 0;
+    };
+    return [...keys].sort((a, b) => rank(a) - rank(b) || label(axis, a || null).localeCompare(label(axis, b || null), "ja"));
+  }
+  const rowsKeys = $derived(orderKeys(rowAxis, [...new Set(cells.map((c) => c.row ?? ""))]));
+  const colKeys = $derived(orderKeys(colAxis, [...new Set(cells.map((c) => c.col ?? ""))]));
   const grid = $derived.by(() => {
     const m = new Map<string, CrossCell>();
     for (const c of cells) m.set(`${c.row ?? ""}|${c.col ?? ""}`, c);

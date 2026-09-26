@@ -187,13 +187,13 @@ mod tests {
         db.pack_install(&Pack::from_yaml(URASENKE_YAML).unwrap()).unwrap();
         let me = db.self_person_id().unwrap();
         db.vocab_upsert(&Vocab {
-            id: "place.yasu-an".into(), kind: "place".into(), ja: "八洲庵".into(),
+            id: "place.shofu-an".into(), kind: "place".into(), ja: "松風庵".into(),
             romaji: None, en: None, parent_id: None, sort: None, origin: "user".into(),
             archived: false, meta: None,
         }).unwrap();
         db.session_save(&Session {
             date: Some("2026-05-10".into()),
-            place_id: Some("place.yasu-an".into()),
+            place_id: Some("place.shofu-an".into()),
             online: true,
             note: Some("memo, with \"quotes\"".into()),
             temae: vec![Temae {
@@ -222,7 +222,7 @@ mod tests {
         let csv = db.export_csv().unwrap();
         let lines: Vec<&str> = csv.split("\r\n").collect();
         assert!(lines[0].starts_with("session_id,date,"));
-        assert!(lines[1].contains("八洲庵"));
+        assert!(lines[1].contains("松風庵"));
         assert!(lines[1].contains("花月之式,濃茶付花月"));
         assert!(lines[1].contains("自分,teishu,月"));
         assert!(lines[1].contains("\"line1\nline2\""));

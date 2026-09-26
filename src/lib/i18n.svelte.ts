@@ -24,7 +24,7 @@ export function t(key: string, params?: Record<string, string | number>): string
 export function term(v: Vocab | null | undefined): string {
   if (!v) return "";
   let r = v.romaji?.trim();
-  if (r === v.ja) r = undefined; // alphabet-only names: don't print "Jasmin (Jasmin)"
+  if (r === v.ja) r = undefined; // alphabet-only names: don't print "Anna (Anna)"
   switch (i18n.termMode) {
     case "ja": return v.ja;
     case "romaji": return r || v.ja;

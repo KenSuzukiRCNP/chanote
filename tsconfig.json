@@ -14,6 +14,6 @@
     "baseUrl": ".",
     "paths": { "$lib": ["src/lib"], "$lib/*": ["src/lib/*"], "$locales/*": ["locales/*"] }
   },
-  "include": ["src/**/*.ts", "src/**/*.js", "src/**/*.svelte", "locales/*.json"],
+  "include": ["src/**/*.ts", "src/**/*.js", "src/**/*.svelte", "locales/*.json", "samples/*.json"],
   "extends": "@tsconfig/svelte/tsconfig.json"
 }

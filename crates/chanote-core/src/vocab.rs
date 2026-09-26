@@ -226,8 +226,8 @@ mod tests {
         let db = Db::open_in_memory().unwrap();
         db.pack_install(&crate::pack::Pack::from_yaml(crate::pack::URASENKE_YAML).unwrap()).unwrap();
         let me = db.self_person_id().unwrap();
-        db.vocab_upsert(&v("person.x", "person", "Jasmin", json!({}))).unwrap();
-        db.vocab_upsert(&v("person.y", "person", "Gernot", json!({}))).unwrap();
+        db.vocab_upsert(&v("person.x", "person", "Anna", json!({}))).unwrap();
+        db.vocab_upsert(&v("person.y", "person", "Marco", json!({}))).unwrap();
         // pack row → refused
         assert!(db.vocab_delete("temae.karamono").is_err());
         assert!(db.vocab_delete(&me).is_err());
