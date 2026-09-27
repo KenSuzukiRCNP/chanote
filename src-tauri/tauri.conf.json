@@ -40,7 +40,8 @@
       "icons/icon.ico"
     ],
     "macOS": {
-      "minimumSystemVersion": "12.0"
+      "minimumSystemVersion": "12.0",
+      "signingIdentity": "-"
     },
     "category": "Lifestyle",
     "shortDescription": "Tea ceremony practice log",

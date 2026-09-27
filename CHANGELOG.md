@@ -1,10 +1,18 @@
 # Changelog
 
+chanote の変更履歴です。形式は [Keep a Changelog](https://keepachangelog.com/ja/1.1.0/) に、
+バージョン番号は [Semantic Versioning](https://semver.org/lang/ja/) に従います。
+各版の冒頭に英語の要約を添えています。
+
 All notable changes to chanote are listed here, newest first. Each version starts with a
 one-paragraph English summary; the details are in Japanese.
 
 ## [Unreleased]
 
+### 修正
+- GitHub Actions の macOS ビルドが署名で失敗していたのを修正(ad-hoc 署名に変更)。
+
+### 予定
 - 人物・場所の入力補完(コンボボックス)
 - 統計の期間の任意指定、CSV の列選択
 - 流派パック(裏千家以外)の追加 ── [docs/school-packs.md](docs/school-packs.md) 参照
@@ -96,3 +104,4 @@ release builds for macOS, Windows and Linux.
 [Unreleased]: https://github.com/KenSuzukiRCNP/chanote/compare/v0.3.0...HEAD
 [0.3.0]: https://github.com/KenSuzukiRCNP/chanote/releases/tag/v0.3.0
 [0.2.0]: https://github.com/KenSuzukiRCNP/chanote/releases/tag/v0.2.0
+[0.1.0]: https://github.com/KenSuzukiRCNP/chanote/releases/tag/v0.1.0

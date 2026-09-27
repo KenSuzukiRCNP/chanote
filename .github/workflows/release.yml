@@ -2,8 +2,8 @@
 # like v0.1.0 is pushed, and attaches them to a GitHub Release (created as a draft so
 # you can write release notes before publishing).
 #
-# Unsigned builds: macOS users must right-click → Open the first time (see README).
-# To sign + notarize on macOS, add the secrets listed under `env` below.
+# macOS builds are ad-hoc signed (no Apple Developer account): users must right-click →
+# Open the first time (see README). To sign + notarize later, see the comment under `env`.
 
 name: release
 
@@ -56,13 +56,15 @@ jobs:
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Optional macOS signing/notarization — leave unset for unsigned builds.
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          # macOS builds are ad-hoc signed (bundle.macOS.signingIdentity = "-" in
+          # tauri.conf.json), so no Apple Developer account is needed.
+          # Do NOT add APPLE_* variables here unless the secrets really exist:
+          # an undefined secret expands to an empty string, and Tauri then tries to
+          # sign with an empty identity and the build fails.
+          # With an Apple Developer account, add (as repository secrets):
+          #   APPLE_CERTIFICATE, APPLE_CERTIFICATE_PASSWORD, APPLE_SIGNING_IDENTITY,
+          #   APPLE_ID, APPLE_PASSWORD, APPLE_TEAM_ID
+          # and remove signingIdentity from tauri.conf.json.
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "chanote ${{ github.ref_name }}"

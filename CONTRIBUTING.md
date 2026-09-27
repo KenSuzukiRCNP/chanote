@@ -63,6 +63,8 @@ Releases are built by GitHub Actions from a `v*` tag (`.github/workflows/release
 `scripts/bump-version.sh X.Y.Z` sets the version in the three places that must agree.
 Before tagging, move the `[Unreleased]` items in [CHANGELOG.md](CHANGELOG.md) under a new
 version heading with the date, and add the version's link at the bottom of the file.
+macOS builds are ad-hoc signed (`bundle.macOS.signingIdentity: "-"`), which needs no Apple
+Developer account; the workflow file explains what to add to sign and notarize instead.
 
 ## Icon
 
