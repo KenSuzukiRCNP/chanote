@@ -314,22 +314,22 @@ mod tests {
     fn coverage_groups_by_role_and_hearth() {
         let db = Db::open_in_memory().unwrap();
         db.pack_install(&crate::pack::Pack::from_yaml(crate::pack::URASENKE_YAML).unwrap()).unwrap();
-        db.session_save(&session("2025-02-01", vec![tm("temae.karamono", "ro", Some("teishu"))])).unwrap();
+        db.session_save(&session("2025-02-01", vec![tm("temae.urasenke.karamono", "ro", Some("teishu"))])).unwrap();
         db.session_save(&session("2025-07-01", vec![
-            tm("temae.karamono", "furo", Some("teishu")),
-            tm("temae.karamono", "furo", Some("kyaku")),
-            tm("temae.kagetsu", "furo", None),
+            tm("temae.urasenke.karamono", "furo", Some("teishu")),
+            tm("temae.urasenke.karamono", "furo", Some("kyaku")),
+            tm("temae.urasenke.kagetsu", "furo", None),
         ])).unwrap();
 
         let rows = db.stats_coverage(&StatsFilter::default()).unwrap();
         let find = |t: &str, h: &str, r: &str| {
             rows.iter().find(|x| x.temae_id.as_deref() == Some(t) && x.hearth.as_deref() == Some(h) && x.role == r).cloned()
         };
-        assert_eq!(find("temae.karamono", "ro", "host").unwrap().n, 1);
-        assert_eq!(find("temae.karamono", "furo", "host").unwrap().n, 1);
-        assert_eq!(find("temae.karamono", "furo", "other").unwrap().n, 1);
-        assert_eq!(find("temae.kagetsu", "furo", "absent").unwrap().n, 1);
-        assert_eq!(find("temae.karamono", "furo", "host").unwrap().last_date.as_deref(), Some("2025-07-01"));
+        assert_eq!(find("temae.urasenke.karamono", "ro", "host").unwrap().n, 1);
+        assert_eq!(find("temae.urasenke.karamono", "furo", "host").unwrap().n, 1);
+        assert_eq!(find("temae.urasenke.karamono", "furo", "other").unwrap().n, 1);
+        assert_eq!(find("temae.urasenke.kagetsu", "furo", "absent").unwrap().n, 1);
+        assert_eq!(find("temae.urasenke.karamono", "furo", "host").unwrap().last_date.as_deref(), Some("2025-07-01"));
 
         // since filter
         let rows = db.stats_coverage(&StatsFilter { since: Some("2025-06-01".into()), ..Default::default() }).unwrap();
@@ -349,11 +349,11 @@ mod tests {
 
         // cross: temae × hearth_group, all roles
         let c = db.stats_cross("temae", "hearth_group", false, &StatsFilter::default()).unwrap();
-        let cell = c.iter().find(|x| x.row.as_deref() == Some("temae.karamono") && x.col.as_deref() == Some("furo")).unwrap();
+        let cell = c.iter().find(|x| x.row.as_deref() == Some("temae.urasenke.karamono") && x.col.as_deref() == Some("furo")).unwrap();
         assert_eq!(cell.n, 2);
         // host only
         let c = db.stats_cross("temae", "hearth_group", true, &StatsFilter::default()).unwrap();
-        let cell = c.iter().find(|x| x.row.as_deref() == Some("temae.karamono") && x.col.as_deref() == Some("furo")).unwrap();
+        let cell = c.iter().find(|x| x.row.as_deref() == Some("temae.urasenke.karamono") && x.col.as_deref() == Some("furo")).unwrap();
         assert_eq!(cell.n, 1);
         assert!(db.stats_cross("nope", "tea", false, &StatsFilter::default()).is_err());
 
@@ -364,8 +364,8 @@ mod tests {
             date: Some("2026-01-01".into()), place_id: Some("place.a".into()),
             persons: vec![crate::model::SessionPerson { person_id: Some("person.t".into()), name_free: None, role: "teacher".into() }],
             temae: vec![
-                Temae { temae_id: Some("temae.karamono".into()), my_role: Some("teishu".into()), ..Default::default() },
-                Temae { temae_id: Some("temae.karamono".into()), my_role: Some("kyaku".into()), host_id: Some("person.t".into()), ..Default::default() },
+                Temae { temae_id: Some("temae.urasenke.karamono".into()), my_role: Some("teishu".into()), ..Default::default() },
+                Temae { temae_id: Some("temae.urasenke.karamono".into()), my_role: Some("kyaku".into()), host_id: Some("person.t".into()), ..Default::default() },
             ],
             ..Default::default()
         }).unwrap();

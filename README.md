@@ -25,6 +25,10 @@ A date can be "sometime in March 2019"; a shelf can be "there was one, I forget 
 the names you actually use and chanote records them as the underlying procedure plus its
 settings, so statistics still add up.
 
+**Find it again.** Filter the diary by procedure or a whole category (all of *shikaden*,
+say), period, place, teacher, people who were there, utensils used, or words in your
+notes — and switch on the notes to re-read your teacher's remarks before the next lesson.
+
 **Statistics that answer real questions.**
 - *Coverage* — every procedure in the school's curriculum, how often you have done it, when
   last, grouped by category (konarai, shikaden, okuden …) with a progress bar per category.
@@ -34,8 +38,8 @@ settings, so statistics still add up.
 - *People and places* — by teacher, by place, whose temae you watched, who sat with you.
 
 <p align="center">
+  <img src="docs/screenshots/home-filter.png" width="49%" alt="Filtering records">
   <img src="docs/screenshots/stats-timeline.png" width="49%" alt="Timeline">
-  <img src="docs/screenshots/stats-cross.png" width="49%" alt="Cross table">
 </p>
 
 **Utensils with a memory.** Categories (tea bowl, thin-tea container, chaire, shifuku,
@@ -45,7 +49,8 @@ pick a chaire and its shifuku comes along.
 **Yours, on your machine.** Everything lives in one SQLite file plus a photo folder on your
 computer. No account, no server, no tracking. Export to JSON (complete) or CSV (one row per
 temae, for Excel or pandas), make a zip backup with photos, restore it on another Mac.
-Several people can share one computer, each with their own diary.
+Several people can share one computer, each with their own diary — and a friend's export
+can be imported *as your own* diary, with their guest entries becoming your roles.
 
 **Japanese and English.** The interface is available in both. Tea terms are shown in
 Japanese, Japanese + romaji, or romaji only, with an English gloss on hover.

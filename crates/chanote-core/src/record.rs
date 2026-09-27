@@ -1,6 +1,36 @@
 use crate::model::{Session, SessionPerson, SessionSummary, Temae, TemaePerson, TemaeTool};
 use crate::{Db, Error, Result};
 use rusqlite::{params, OptionalExtension, Transaction};
+use serde::{Deserialize, Serialize};
+
+/// Filter for the records list. Every field is optional; lists are AND-ed
+/// (all listed persons/tools must appear somewhere in the session).
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
+pub struct SessionFilter {
+    /// main temae ids OR alias ids; a session matches if any of its temae is in the set
+    #[serde(default)]
+    pub temae: Vec<String>,
+    pub since: Option<String>,
+    pub until: Option<String>,
+    pub place_id: Option<String>,
+    pub teacher_id: Option<String>,
+    /// person ids (host, teacher, guest, participant — anywhere in the session)
+    #[serde(default)]
+    pub persons: Vec<String>,
+    /// tool ids
+    #[serde(default)]
+    pub tools: Vec<String>,
+    /// "teishu" to keep only sessions where I hosted at least one of the (filtered) temae
+    pub my_role: Option<String>,
+    /// free-text search in notes (session note, temae note)
+    pub text: Option<String>,
+}
+
+impl SessionFilter {
+    pub fn is_empty(&self) -> bool {
+        self == &SessionFilter::default()
+    }
+}
 
 impl Db {
     /// Home list, newest first. `limit`/`offset` for paging.
@@ -14,6 +44,73 @@ impl Db {
              LIMIT ?1 OFFSET ?2",
         )?;
         let rows = st.query_map(params![limit, offset], |r| {
+            Ok(SessionSummary {
+                id: r.get(0)?,
+                date: r.get(1)?,
+                date_prec: r.get(2)?,
+                place_id: r.get(3)?,
+                kind: r.get(4)?,
+                online: r.get::<_, i64>(5)? != 0,
+                temae_count: r.get(6)?,
+            })
+        })?;
+        Ok(rows.collect::<rusqlite::Result<_>>()?)
+    }
+
+    /// Filtered list, newest first. Returns summaries like `session_list`.
+    pub fn session_search(&self, f: &SessionFilter, limit: i64, offset: i64) -> Result<Vec<SessionSummary>> {
+        let mut sql = String::from(
+            "SELECT s.id, s.date, s.date_prec, s.place_id, s.kind, s.online,
+                    (SELECT COUNT(*) FROM temae t WHERE t.session_id = s.id) AS n
+             FROM session s WHERE 1=1",
+        );
+        let mut args: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
+        if let Some(x) = &f.since { sql.push_str(" AND s.date >= ?"); args.push(Box::new(x.clone())); }
+        if let Some(x) = &f.until { sql.push_str(" AND s.date <= ?"); args.push(Box::new(x.clone())); }
+        if let Some(x) = &f.place_id { sql.push_str(" AND s.place_id = ?"); args.push(Box::new(x.clone())); }
+        if let Some(x) = &f.teacher_id {
+            sql.push_str(" AND (EXISTS (SELECT 1 FROM session_person sp WHERE sp.session_id = s.id AND sp.role = 'teacher' AND sp.person_id = ?)
+                              OR EXISTS (SELECT 1 FROM temae t WHERE t.session_id = s.id AND t.teacher_id = ?))");
+            args.push(Box::new(x.clone()));
+            args.push(Box::new(x.clone()));
+        }
+        if !f.temae.is_empty() {
+            let marks = vec!["?"; f.temae.len()].join(",");
+            let role = if f.my_role.is_some() { " AND t.my_role = ?" } else { "" };
+            sql.push_str(&format!(
+                " AND EXISTS (SELECT 1 FROM temae t WHERE t.session_id = s.id AND (t.temae_id IN ({marks}) OR t.temae_alias_id IN ({marks})){role})"
+            ));
+            for x in &f.temae { args.push(Box::new(x.clone())); }
+            for x in &f.temae { args.push(Box::new(x.clone())); }
+            if let Some(r) = &f.my_role { args.push(Box::new(r.clone())); }
+        } else if let Some(r) = &f.my_role {
+            sql.push_str(" AND EXISTS (SELECT 1 FROM temae t WHERE t.session_id = s.id AND t.my_role = ?)");
+            args.push(Box::new(r.clone()));
+        }
+        for p in &f.persons {
+            sql.push_str(
+                " AND (EXISTS (SELECT 1 FROM session_person sp WHERE sp.session_id = s.id AND sp.person_id = ?)
+                   OR EXISTS (SELECT 1 FROM temae t WHERE t.session_id = s.id AND (t.host_id = ? OR t.teacher_id = ?))
+                   OR EXISTS (SELECT 1 FROM temae_person tp JOIN temae t ON t.id = tp.temae_id WHERE t.session_id = s.id AND tp.person_id = ?))",
+            );
+            for _ in 0..4 { args.push(Box::new(p.clone())); }
+        }
+        for tool in &f.tools {
+            sql.push_str(" AND EXISTS (SELECT 1 FROM temae_tool tt JOIN temae t ON t.id = tt.temae_id WHERE t.session_id = s.id AND tt.tool_id = ?)");
+            args.push(Box::new(tool.clone()));
+        }
+        if let Some(x) = f.text.as_ref().filter(|x| !x.trim().is_empty()) {
+            let like = format!("%{}%", x.trim());
+            sql.push_str(" AND (s.note LIKE ? OR EXISTS (SELECT 1 FROM temae t WHERE t.session_id = s.id AND (t.note LIKE ? OR t.my_role_note LIKE ?)))");
+            for _ in 0..3 { args.push(Box::new(like.clone())); }
+        }
+        sql.push_str(" ORDER BY s.date DESC NULLS LAST, s.id DESC LIMIT ? OFFSET ?");
+        args.push(Box::new(limit));
+        args.push(Box::new(offset));
+
+        let conn = self.conn();
+        let mut st = conn.prepare(&sql)?;
+        let rows = st.query_map(rusqlite::params_from_iter(args.iter().map(|b| b.as_ref())), |r| {
             Ok(SessionSummary {
                 id: r.get(0)?,
                 date: r.get(1)?,
@@ -238,7 +335,8 @@ mod tests {
             ("place.shofu-an", "place", "松風庵"),
             ("person.yamada", "person", "山田先生"),
             ("person.sato", "person", "佐藤さん"),
-            ("temae.shin-no-gyo", "temae", "真之行台子"),
+            ("temae.urasenke.shin-no-gyo", "temae", "真之行台子"),
+            ("temae.urasenke.karamono", "temae", "唐物"),
         ] {
             db.vocab_upsert(&Vocab {
                 id: id.into(),
@@ -279,7 +377,7 @@ mod tests {
             }],
             temae: vec![
                 Temae {
-                    temae_id: Some("temae.shin-no-gyo".into()),
+                    temae_id: Some("temae.urasenke.shin-no-gyo".into()),
                     host_id: Some("person.sato".into()),
                     teacher_id: Some("person.yamada".into()),
                     my_role: Some("kyaku".into()),
@@ -288,7 +386,7 @@ mod tests {
                     ..Default::default()
                 },
                 Temae {
-                    temae_id: Some("temae.shin-no-gyo".into()),
+                    temae_id: Some("temae.urasenke.shin-no-gyo".into()),
                     host_id: Some(me.clone()),
                     my_role: Some("teishu".into()),
                     hearth: Some("furo".into()),
@@ -325,6 +423,47 @@ mod tests {
 
         db.session_delete(id).unwrap();
         assert!(db.session_get(id).unwrap().is_none());
+    }
+
+    #[test]
+    fn search_filters() {
+        let db = Db::open_in_memory().unwrap();
+        seed(&db);
+        db.vocab_upsert(&Vocab { id: "tool.bowl".into(), kind: "tool".into(), ja: "茶碗".into(), romaji: None, en: None, parent_id: None, sort: None, origin: "user".into(), archived: false, meta: None }).unwrap();
+        let me = db.self_person_id().unwrap();
+        let mk = |date: &str, temae: &str, host: &str, role: &str, note: Option<&str>, tool: bool| Session {
+            date: Some(date.into()), place_id: Some("place.shofu-an".into()),
+            persons: vec![SessionPerson { person_id: Some("person.yamada".into()), name_free: None, role: "teacher".into() }],
+            temae: vec![Temae {
+                temae_id: Some(temae.into()), host_id: Some(host.into()), my_role: Some(role.into()),
+                note: note.map(Into::into),
+                tools: if tool { vec![TemaeTool { tool_id: Some("tool.bowl".into()), name_free: None, external_ref: None }] } else { vec![] },
+                ..Default::default()
+            }],
+            ..Default::default()
+        };
+        db.session_save(&mk("2026-01-10", "temae.urasenke.shin-no-gyo", &me, "teishu", Some("柄杓の扱いを注意された"), true)).unwrap();
+        db.session_save(&mk("2026-02-10", "temae.urasenke.shin-no-gyo", "person.sato", "kyaku", None, false)).unwrap();
+        db.session_save(&mk("2026-03-10", "temae.urasenke.karamono", &me, "teishu", None, false)).unwrap();
+
+        let all = db.session_search(&SessionFilter::default(), 100, 0).unwrap();
+        assert_eq!(all.len(), 3);
+        let f = SessionFilter { temae: vec!["temae.urasenke.shin-no-gyo".into()], ..Default::default() };
+        assert_eq!(db.session_search(&f, 100, 0).unwrap().len(), 2);
+        let f = SessionFilter { temae: vec!["temae.urasenke.shin-no-gyo".into()], my_role: Some("teishu".into()), ..Default::default() };
+        assert_eq!(db.session_search(&f, 100, 0).unwrap().len(), 1);
+        let f = SessionFilter { persons: vec!["person.sato".into()], ..Default::default() };
+        assert_eq!(db.session_search(&f, 100, 0).unwrap().len(), 1);
+        let f = SessionFilter { persons: vec!["person.sato".into(), "person.yamada".into()], ..Default::default() };
+        assert_eq!(db.session_search(&f, 100, 0).unwrap().len(), 1);
+        let f = SessionFilter { tools: vec!["tool.bowl".into()], ..Default::default() };
+        assert_eq!(db.session_search(&f, 100, 0).unwrap().len(), 1);
+        let f = SessionFilter { since: Some("2026-02-01".into()), until: Some("2026-02-28".into()), ..Default::default() };
+        assert_eq!(db.session_search(&f, 100, 0).unwrap().len(), 1);
+        let f = SessionFilter { text: Some("柄杓".into()), ..Default::default() };
+        assert_eq!(db.session_search(&f, 100, 0).unwrap().len(), 1);
+        let f = SessionFilter { teacher_id: Some("person.yamada".into()), place_id: Some("place.shofu-an".into()), ..Default::default() };
+        assert_eq!(db.session_search(&f, 100, 0).unwrap().len(), 3);
     }
 
     #[test]

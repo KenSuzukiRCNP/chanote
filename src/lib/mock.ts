@@ -1,7 +1,7 @@
 // In-memory stand-in for the Rust backend, used only when running `npm run dev`
 // in a plain browser. Enough to click through the UI; not a faithful copy.
 
-import type { Attachment, CoverageRow, CrossCell, MonthlyRow, Session, SessionSummary, Vocab } from "./types";
+import type { Attachment, CoverageRow, CrossCell, MonthlyRow, Session, SessionFilter, SessionSummary, Vocab } from "./types";
 import sample from "../../samples/sample-data.json";
 
 const attachments: Attachment[] = [];
@@ -128,12 +128,35 @@ export async function invoke<T>(cmd: string, args: Record<string, unknown> = {})
     }
     case "vocab_usage":
       return 0 as T;
+    case "pack_reset_row": {
+      const orig = (sample.vocab as Vocab[]).find((x) => x.id === args.id);
+      const i = vocab.findIndex((x) => x.id === args.id);
+      if (orig && i >= 0) vocab[i] = structuredClone(orig);
+      return !!orig as T;
+    }
     case "resolve_temae":
       return resolve(args.id as string) as T;
     case "temae_defaults":
       return resolve(args.id as string).axes as T;
     case "session_list": {
       const out: SessionSummary[] = [...sessions.values()]
+        .sort((a, b) => (b.date ?? "").localeCompare(a.date ?? "") || (b.id ?? 0) - (a.id ?? 0))
+        .map((s) => ({ id: s.id!, date: s.date, date_prec: s.date_prec, place_id: s.place_id, kind: s.kind, online: s.online, temae_count: s.temae.length }));
+      return out as T;
+    }
+    case "session_search": {
+      const f = args.filter as SessionFilter;
+      const has = (s: Session, p: string) =>
+        s.persons.some((x) => x.person_id === p) || s.temae.some((t) => t.host_id === p || t.teacher_id === p || t.persons.some((y) => y.person_id === p));
+      const out: SessionSummary[] = [...sessions.values()]
+        .filter((s) => (!f.since || (s.date ?? "") >= f.since) && (!f.until || (s.date ?? "") <= f.until))
+        .filter((s) => !f.place_id || s.place_id === f.place_id)
+        .filter((s) => !f.teacher_id || s.persons.some((p) => p.role === "teacher" && p.person_id === f.teacher_id) || s.temae.some((t) => t.teacher_id === f.teacher_id))
+        .filter((s) => !f.temae?.length || s.temae.some((t) => (f.temae!.includes(t.temae_id ?? "") || f.temae!.includes(t.temae_alias_id ?? "")) && (!f.my_role || t.my_role === f.my_role)))
+        .filter((s) => f.temae?.length || !f.my_role || s.temae.some((t) => t.my_role === f.my_role))
+        .filter((s) => (f.persons ?? []).every((p) => has(s, p)))
+        .filter((s) => (f.tools ?? []).every((tl) => s.temae.some((t) => t.tools.some((x) => x.tool_id === tl))))
+        .filter((s) => !f.text || (s.note ?? "").includes(f.text) || s.temae.some((t) => (t.note ?? "").includes(f.text!)))
         .sort((a, b) => (b.date ?? "").localeCompare(a.date ?? "") || (b.id ?? 0) - (a.id ?? 0))
         .map((s) => ({ id: s.id!, date: s.date, date_prec: s.date_prec, place_id: s.place_id, kind: s.kind, online: s.online, temae_count: s.temae.length }));
       return out as T;
@@ -179,6 +202,16 @@ export async function invoke<T>(cmd: string, args: Record<string, unknown> = {})
       return 0 as T;
     case "import_read":
       return { vocab_added: 0, vocab_skipped: 12, sessions_added: 0, sessions_skipped: 3 } as T;
+    case "import_preview":
+      return {
+        persons: vocab.filter((v) => v.kind === "person").map((v) => ({ id: v.id, name: v.ja, is_self: !!(v.meta as { is_self?: boolean } | null)?.is_self, n: 5 })),
+        rows: [...sessions.values()].slice(0, 6).map((s, i) => ({ index: i, date: s.date, date_prec: s.date_prec, place: vocab.find((v) => v.id === s.place_id)?.ja ?? "", kind: s.kind, summary: s.temae.map((t) => vocab.find((v) => v.id === (t.temae_alias_id ?? t.temae_id))?.ja ?? "").join(" / "), n_temae: s.temae.length, duplicate_of: i % 2 === 0 ? s.id : null })),
+        vocab_new: 0, schema_version: 2,
+      } as T;
+    case "import_apply":
+      return { vocab_added: 0, vocab_skipped: 12, sessions_added: (args.options as { include?: number[] }).include?.length ?? 3, sessions_skipped: 3 } as T;
+    case "attachment_rebuild_thumbs":
+      return [attachments.length, 0] as T;
     case "stats_axes":
       return AXES as T;
     case "stats_monthly": {

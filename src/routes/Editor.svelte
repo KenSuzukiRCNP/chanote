@@ -7,6 +7,7 @@
   import { emptySession, emptyTemae, UNKNOWN, NONE } from "$lib/types";
   import type { Session, Temae, Vocab, MyRole } from "$lib/types";
   import TemaeExtras from "./TemaeExtras.svelte";
+  import TemaePicker from "./TemaePicker.svelte";
   import PhotoStrip from "./PhotoStrip.svelte";
 
   let { id }: { id: number | null } = $props();
@@ -27,21 +28,13 @@
     loading = false;
   });
 
-  // temae picker grouped by category (pack order)
-  const temaeGroups = $derived.by(() => {
-    const cats = active("temae-cat");
-    const all = active("temae");
-    const groups: { cat: Vocab; items: Vocab[] }[] = [];
-    for (const c of cats) {
-      const items = all.filter((v) => v.parent_id === c.id);
-      if (items.length) groups.push({ cat: c, items });
-    }
-    const orphan = all.filter((v) => !v.parent_id || !cats.some((c) => c.id === v.parent_id));
-    if (orphan.length) groups.push({ cat: { id: "_", kind: "temae-cat", ja: "他", origin: "user", archived: false }, items: orphan });
-    return groups;
-  });
 
   // people and places: most-recently-used first (self always on top)
+  function isKagetsu(tm: Temae): boolean {
+    const cat = (get(tm.temae_id)?.meta as { category?: string } | null)?.category ?? "";
+    return cat === "kagetsu" || cat.endsWith(".kagetsu");
+  }
+
   const persons = $derived.by(() => {
     const r = ranked("person");
     const me = r.find((p) => p.id === vocab.selfId);
@@ -167,7 +160,7 @@
     </select>
 
     <span class="label">{t("session.note")}</span>
-    <input class="field col-span-3" bind:value={s.note} />
+    <textarea class="field col-span-3 resize-y" rows="2" bind:value={s.note}></textarea>
   </div>
 
   {#each s.temae as tm, i (i)}
@@ -175,14 +168,8 @@
       <div class="grid grid-cols-[1fr_1fr_auto_auto] gap-2 items-end">
         <label>
           <div class="label">{t("temae.temae")}</div>
-          <select class="field" value={tm.temae_alias_id ?? tm.temae_id ?? ""} onchange={(e) => pickTemae(tm, e.currentTarget.value)}>
-            <option value="">—</option>
-            {#each temaeGroups as g}
-              <optgroup label={term(g.cat)}>
-                {#each g.items as v}<option value={v.id} title={v.en ?? undefined}>{term(v)}</option>{/each}
-              </optgroup>
-            {/each}
-          </select>
+          <TemaePicker value={tm.temae_alias_id ?? tm.temae_id ? "temae:" + (tm.temae_alias_id ?? tm.temae_id) : ""}
+                       onchange={(v) => pickTemae(tm, v.replace(/^temae:/, ""))} />
         </label>
         <label>
           <div class="label">{t("temae.host")}</div>
@@ -245,9 +232,9 @@
             <input type="time" class="field" bind:value={tm.time} /></label>
           <label class="col-span-2"><div class="label">{t("temae.myRole")} memo</div>
             <input class="field" bind:value={tm.my_role_note} placeholder="月 / 花 / 香 …" /></label>
-          <label class="col-span-2"><div class="label">{t("temae.note")}</div>
-            <input class="field" bind:value={tm.note} /></label>
-          <TemaeExtras temae={tm} isKagetsu={tm.temae_id === "temae.kagetsu"} />
+          <label class="col-span-4"><div class="label">{t("temae.note")}</div>
+            <textarea class="field min-h-16 resize-y" rows="3" bind:value={tm.note} placeholder={t("temae.notePlaceholder")}></textarea></label>
+          <TemaeExtras temae={tm} isKagetsu={isKagetsu(tm)} />
         </div>
       {/if}
       <div class="flex justify-end">

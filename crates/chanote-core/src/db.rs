@@ -7,7 +7,17 @@ use std::sync::{Mutex, MutexGuard};
 const MIGRATIONS: &[(&str, &str)] = &[
     ("001_init", include_str!("../migrations/001_init.sql")),
     ("002_online", include_str!("../migrations/002_online.sql")),
+    ("003_pack_prefix", include_str!("../migrations/003_pack_prefix.sql")),
 ];
+
+/// Data migrations that need Rust (JSON rewriting etc.), run inside the same
+/// transaction right after the SQL of the corresponding version.
+fn data_migration(version: i64, tx: &rusqlite::Transaction) -> Result<()> {
+    match version {
+        3 => crate::migrate::pack_prefix_003(tx),
+        _ => Ok(()),
+    }
+}
 
 pub struct Db {
     conn: Mutex<Connection>,
@@ -46,17 +56,27 @@ impl Db {
     fn migrate(&self) -> Result<()> {
         let mut conn = self.conn();
         let current: i64 = conn.query_row("PRAGMA user_version", [], |r| r.get(0))?;
-        for (i, (_name, sql)) in MIGRATIONS.iter().enumerate() {
-            let version = (i + 1) as i64;
-            if version <= current {
-                continue;
-            }
-            let tx = conn.transaction()?;
-            tx.execute_batch(sql)?;
-            tx.pragma_update(None, "user_version", version)?;
-            tx.commit()?;
+        if current >= MIGRATIONS.len() as i64 {
+            return Ok(());
         }
-        Ok(())
+        // id rewrites need FK enforcement off; the pragma only takes effect outside a tx
+        conn.pragma_update(None, "foreign_keys", false)?;
+        let result = (|| -> Result<()> {
+            for (i, (_name, sql)) in MIGRATIONS.iter().enumerate() {
+                let version = (i + 1) as i64;
+                if version <= current {
+                    continue;
+                }
+                let tx = conn.transaction()?;
+                tx.execute_batch(sql)?;
+                data_migration(version, &tx)?;
+                tx.pragma_update(None, "user_version", version)?;
+                tx.commit()?;
+            }
+            Ok(())
+        })();
+        conn.pragma_update(None, "foreign_keys", true)?;
+        result
     }
 
     pub fn schema_version(&self) -> Result<i64> {

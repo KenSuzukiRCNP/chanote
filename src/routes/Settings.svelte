@@ -4,7 +4,8 @@
   import { pickSavePath, pickOpenPaths } from "$lib/dialogs";
   import { loadVocab } from "$lib/vocab.svelte";
   import { i18n, t, setLang, type UiLang, type TermMode } from "$lib/i18n.svelte";
-  import type { AppInfo, ProfileInfo } from "$lib/types";
+  import type { AppInfo, ImportReport, ProfileInfo } from "$lib/types";
+  import ImportDialog from "./ImportDialog.svelte";
 
   let info = $state<AppInfo | null>(null);
   let msg = $state<string | null>(null);
@@ -56,17 +57,21 @@
     }
   }
 
+  let importPath = $state<string | null>(null);
   async function doImport() {
     msg = null;
     const [path] = await pickOpenPaths({ ext: ["json"], title: t("settings.import") });
     if (!path) return;
-    try {
-      const r = await api.importRead(path);
-      await loadVocab();
-      msg = t("settings.imported", { s: r.sessions_added, ss: r.sessions_skipped, v: r.vocab_added });
-    } catch (e) {
-      msg = String(e);
-    }
+    importPath = path;
+  }
+  function importClosed(r: ImportReport | null) {
+    importPath = null;
+    if (r) msg = t("settings.imported", { s: r.sessions_added, ss: r.sessions_skipped, v: r.vocab_added });
+  }
+  async function rebuildThumbs() {
+    msg = null;
+    const [ok, bad] = await api.attachmentRebuildThumbs();
+    msg = t("settings.thumbsRebuilt", { ok, bad });
   }
 
   async function doBackup() {
@@ -159,6 +164,10 @@
     {/if}
   </div>
   <p class="text-xs text-stone-500">{t("settings.backupHelp")}</p>
+  <div class="flex gap-2 items-center pt-2 border-t border-line">
+    <button class="btn" onclick={rebuildThumbs}>{t("settings.rebuildThumbs")}</button>
+    <span class="text-xs text-stone-500">{t("settings.rebuildThumbsHelp")}</span>
+  </div>
   {#if msg}<p class="text-xs text-matcha-deep break-all">{msg}</p>{/if}
   {#if info}
     <div class="grid grid-cols-[auto_1fr] gap-x-6 gap-y-1 pt-2 border-t border-line">
@@ -168,3 +177,7 @@
     </div>
   {/if}
 </div>
+
+{#if importPath}
+  <ImportDialog path={importPath} onclose={importClosed} />
+{/if}

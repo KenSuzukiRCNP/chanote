@@ -70,3 +70,42 @@ export function active(kind: string): Vocab[] {
 export function teachers(): Vocab[] {
   return active("person").filter((v) => (v.meta as { teacher?: boolean } | null)?.teacher);
 }
+
+/** Category tree for pickers: each category with its temae (aliases included) and its
+ *  sub-categories, in pack order. */
+export interface CatNode { cat: Vocab; items: Vocab[]; children: CatNode[] }
+export function categoryTree(): CatNode[] {
+  const cats = active("temae-cat");
+  const all = active("temae");
+  const build = (parent: string | null): CatNode[] =>
+    cats.filter((c) => (c.parent_id ?? null) === parent).map((c) => ({
+      cat: c, items: all.filter((v) => v.parent_id === c.id), children: build(c.id),
+    }));
+  return build(null);
+}
+
+/** All temae ids (main and alias) under a category, recursively. */
+export function temaeUnderCategory(catId: string): string[] {
+  const cats = active("temae-cat");
+  const all = active("temae");
+  const out: string[] = [];
+  const walk = (id: string) => {
+    for (const v of all) if (v.parent_id === id) out.push(v.id);
+    for (const c of cats) if (c.parent_id === id) walk(c.id);
+  };
+  walk(catId);
+  return out;
+}
+
+/** Uncategorised temae (user-added without a category). */
+export function uncategorisedTemae(): Vocab[] {
+  const catIds = new Set(active("temae-cat").map((c) => c.id));
+  return active("temae").filter((v) => !v.parent_id || !catIds.has(v.parent_id));
+}
+
+/** Display name of the pack a row came from ("裏千家"), or null for user rows. */
+export function packName(v: Vocab): string | null {
+  if (!v.origin.startsWith("pack:")) return null;
+  const school = vocab.byId["school." + v.origin.slice(5)];
+  return school ? school.ja : v.origin.slice(5);
+}

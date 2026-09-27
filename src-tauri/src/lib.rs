@@ -4,7 +4,8 @@
 use chanote_core::model::{AxisValues, ResolvedTemae, Session, SessionSummary, Vocab};
 use chanote_core::pack::{Pack, URASENKE_YAML};
 use chanote_core::attachment::Attachment;
-use chanote_core::import::ImportReport;
+use chanote_core::import::{ImportOptions, ImportPreview, ImportReport};
+use chanote_core::record::SessionFilter;
 use chanote_core::stats::{CoverageRow, CrossCell, MonthlyRow, StatsFilter, StatsTotals, CROSS_AXES};
 use chanote_core::ranking::RankRow;
 use chanote_core::stats::ByRow;
@@ -95,6 +96,12 @@ fn vocab_archive(state: State<AppState>, id: String, archived: bool) -> CmdResul
 }
 
 #[tauri::command]
+fn pack_reset_row(state: State<AppState>, id: String) -> CmdResult<bool> {
+    let pack = Pack::from_yaml(URASENKE_YAML).map_err(e)?;
+    state.o().db.pack_reset_row(&pack, &id).map_err(e)
+}
+
+#[tauri::command]
 fn vocab_delete(state: State<AppState>, id: String) -> CmdResult<()> {
     state.o().db.vocab_delete(&id).map_err(e)
 }
@@ -119,6 +126,11 @@ fn temae_defaults(state: State<AppState>, id: String) -> CmdResult<AxisValues> {
 #[tauri::command]
 fn session_list(state: State<AppState>, limit: i64, offset: i64) -> CmdResult<Vec<SessionSummary>> {
     state.o().db.session_list(limit, offset).map_err(e)
+}
+
+#[tauri::command]
+fn session_search(state: State<AppState>, filter: SessionFilter, limit: i64, offset: i64) -> CmdResult<Vec<SessionSummary>> {
+    state.o().db.session_search(&filter, limit, offset).map_err(e)
 }
 
 #[tauri::command]
@@ -224,6 +236,12 @@ fn attachment_path(state: State<AppState>, id: i64) -> CmdResult<Option<String>>
 }
 
 #[tauri::command]
+fn attachment_rebuild_thumbs(state: State<AppState>) -> CmdResult<(usize, usize)> {
+    let o = state.o();
+    o.db.attachment_rebuild_thumbs(&o.data_dir).map_err(e)
+}
+
+#[tauri::command]
 fn attachment_counts(state: State<AppState>) -> CmdResult<Vec<(i64, i64)>> {
     state.o().db.attachment_counts().map_err(e)
 }
@@ -248,11 +266,23 @@ fn export_write(state: State<AppState>, path: String, format: String) -> CmdResu
     Ok(body.len())
 }
 
-/// Import a chanote JSON export from `path`.
+/// Import a chanote JSON export from `path` (no options: skip duplicates).
 #[tauri::command]
 fn import_read(state: State<AppState>, path: String) -> CmdResult<ImportReport> {
     let json = std::fs::read_to_string(&path).map_err(e)?;
     state.o().db.import_json(&json).map_err(e)
+}
+
+#[tauri::command]
+fn import_preview(state: State<AppState>, path: String, options: ImportOptions) -> CmdResult<ImportPreview> {
+    let json = std::fs::read_to_string(&path).map_err(e)?;
+    state.o().db.import_preview(&json, &options).map_err(e)
+}
+
+#[tauri::command]
+fn import_apply(state: State<AppState>, path: String, options: ImportOptions) -> CmdResult<ImportReport> {
+    let json = std::fs::read_to_string(&path).map_err(e)?;
+    state.o().db.import_json_with(&json, &options).map_err(e)
 }
 
 /// Full backup (database + photos) as a zip.
@@ -388,10 +418,12 @@ pub fn run() {
             vocab_archive,
             vocab_delete,
             vocab_usage,
+            pack_reset_row,
             resolve_temae,
             temae_defaults,
             session_list,
             session_get,
+            session_search,
             session_save,
             session_delete,
             stats_coverage,
@@ -408,6 +440,8 @@ pub fn run() {
             profile_switch,
             export_write,
             import_read,
+            import_preview,
+            import_apply,
             backup_write,
             backup_zip,
             backup_restore,
@@ -419,6 +453,7 @@ pub fn run() {
             attachment_delete,
             attachment_path,
             attachment_counts,
+            attachment_rebuild_thumbs,
         ])
         .run(tauri::generate_context!())
         .expect("error while running chanote");

@@ -20,7 +20,7 @@
 # Ids are stable identifiers, never shown to users. Do not rename; archive instead.
 
 id: urasenke
-version: "2026.09.2"
+version: "2026.09.3"
 name: { ja: 裏千家, romaji: Urasenke, en: Urasenke school }
 
 categories:
@@ -257,18 +257,18 @@ temae:
     en: Tea box, Flower
     category: chabako
     defaults: { tea: usucha, tana: "-", hearth: binkake }
-  - id: gosho-kago
-    ja: 御所籠
-    romaji: gosho-kago
-    en: Imperial basket
-    category: chabako
-    defaults: { tea: usucha, tana: "-", hearth: binkake }
   - id: shikishidate
     ja: 色紙点
     romaji: shikishidate
-    en: Shikishi procedure (with Gosho-kago)
+    en: Shikishi procedure (with the imperial basket)
     category: chabako
     defaults: { tea: usucha, tana: "-", hearth: binkake }
+  - id: gosho-kago                     # familiar name for 色紙点 (the basket used)
+    ja: 御所籠
+    romaji: gosho-kago
+    category: chabako
+    alias_of: shikishidate
+    modifiers: {}
 
   # ---- 四ヶ伝 -------------------------------------------------------------
   - id: satsubako
@@ -438,6 +438,30 @@ temae:
     en: Tea tasting game
     category: shichijishiki
     defaults: { tea: koicha }
+  - id: setsugekka
+    ja: 雪月花之式
+    romaji: setsugekka no shiki
+    en: Snow-moon-flower (kagetsu with sweets and koicha)
+    category: shichijishiki
+    defaults: { tana: "-" }
+  - id: sanyu
+    ja: 三友之式
+    romaji: san'yū no shiki
+    en: Three friends (flowers, incense, tea)
+    category: shichijishiki
+    defaults: { tana: "-" }
+  - id: sen-yu
+    ja: 仙遊之式
+    romaji: sen'yū no shiki
+    en: Sen'yū (charcoal, incense, flowers, tea)
+    category: shichijishiki
+    defaults: { tana: "-" }
+  - id: homa
+    ja: 法磨之式
+    romaji: hōma no shiki
+    en: Hōma (scored kagetsu, koicha then usucha)
+    category: shichijishiki
+    defaults: { tana: "-" }
 
 tana:
   # Starting list — please review/extend in the app's list editor. Ids follow the romaji.

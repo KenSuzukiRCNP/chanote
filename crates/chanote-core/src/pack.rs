@@ -102,7 +102,30 @@ impl Pack {
         Ok(())
     }
 
-    /// Flatten into vocab rows. Ids are prefixed by kind ("temae.", "tana.", ...).
+    /// Id of a temae in this pack: `temae.<pack>.<id>`.
+    pub fn temae_id(&self, id: &str) -> String {
+        format!("temae.{}.{}", self.id, id)
+    }
+    pub fn cat_id(&self, id: &str) -> String {
+        format!("temae-cat.{}.{}", self.id, id)
+    }
+    pub fn tana_id(&self, id: &str) -> String {
+        format!("tana.{}.{}", self.id, id)
+    }
+    /// Axis values as written in the pack (`tana: daisu.shin` or `tana: "-"`) → stored form.
+    fn axes(&self, a: &Option<AxisValues>) -> Option<AxisValues> {
+        a.as_ref().map(|a| AxisValues {
+            tana: a.tana.as_ref().map(|t| {
+                if t == "-" || t == "?" { t.clone() }
+                else { self.tana_id(t.strip_prefix("tana.").unwrap_or(t)) }
+            }),
+            ..a.clone()
+        })
+    }
+
+    /// Flatten into vocab rows. Ids are `<kind>.<pack>.<id>` for temae, categories and
+    /// shelves (so two schools' "karamono" never collide); hearths and utensil categories
+    /// are shared across schools and stay `<kind>.<id>`.
     pub fn to_vocab(&self) -> Vec<Vocab> {
         let origin = format!("pack:{}", self.id);
         let mut out = Vec::new();
@@ -127,27 +150,27 @@ impl Pack {
         // categories live in the temae kind as group headers (parent for temae rows)
         for (i, c) in self.categories.iter().enumerate() {
             out.push(mk(
-                format!("temae-cat.{}", c.id), "temae-cat", &c.ja, &c.romaji, &c.en,
-                c.parent.as_ref().map(|p| format!("temae-cat.{p}")), i as i64, None,
+                self.cat_id(&c.id), "temae-cat", &c.ja, &c.romaji, &c.en,
+                c.parent.as_ref().map(|p| self.cat_id(p)), i as i64, None,
             ));
         }
         for (i, t) in self.temae.iter().enumerate() {
             let meta = TemaeMeta {
                 category: t.category.clone(),
-                defaults: t.defaults.clone(),
-                alias_of: t.alias_of.as_ref().map(|a| format!("temae.{a}")),
-                modifiers: t.modifiers.clone(),
+                defaults: self.axes(&t.defaults),
+                alias_of: t.alias_of.as_ref().map(|a| self.temae_id(a)),
+                modifiers: self.axes(&t.modifiers),
             };
             out.push(mk(
-                format!("temae.{}", t.id), "temae", &t.ja, &t.romaji, &t.en,
-                t.category.as_ref().map(|c| format!("temae-cat.{c}")), i as i64,
+                self.temae_id(&t.id), "temae", &t.ja, &t.romaji, &t.en,
+                t.category.as_ref().map(|c| self.cat_id(c)), i as i64,
                 Some(serde_json::to_value(meta).unwrap()),
             ));
         }
         for (i, x) in self.tana.iter().enumerate() {
             out.push(mk(
-                format!("tana.{}", x.id), "tana", &x.ja, &x.romaji, &x.en,
-                x.parent.as_ref().map(|p| format!("tana.{p}")), i as i64, None,
+                self.tana_id(&x.id), "tana", &x.ja, &x.romaji, &x.en,
+                x.parent.as_ref().map(|p| self.tana_id(p)), i as i64, None,
             ));
         }
         for (i, x) in self.hearth.iter().enumerate() {
@@ -183,6 +206,13 @@ impl Db {
         // order: parents (school, categories, tana parents) before children — to_vocab already
         // emits categories before temae; tana parents must precede children in the YAML.
         for v in pack.to_vocab() {
+            // rows the user edited in the app (meta.pinned) keep their values
+            if let Some(existing) = self.vocab_get(&v.id)? {
+                let pinned = existing.meta.as_ref().and_then(|m| m.get("pinned")).and_then(|x| x.as_bool()) == Some(true);
+                if pinned {
+                    continue;
+                }
+            }
             self.vocab_upsert(&v)?;
         }
         self.conn().execute(
@@ -192,6 +222,19 @@ impl Db {
             [&pack.id, &pack.version],
         )?;
         Ok(true)
+    }
+}
+
+impl Db {
+    /// Restore one row to the pack's definition (drops the user's edits / pin).
+    pub fn pack_reset_row(&self, pack: &Pack, id: &str) -> Result<bool> {
+        match pack.to_vocab().into_iter().find(|v| v.id == id) {
+            Some(v) => {
+                self.vocab_upsert(&v)?;
+                Ok(true)
+            }
+            None => Ok(false),
+        }
     }
 }
 
@@ -218,17 +261,43 @@ mod tests {
             assert!(db.vocab_get(&r.temae_id).unwrap().is_some());
         }
         // spot checks from the spec
-        let r = db.resolve_temae("temae.karamono").unwrap();
+        let r = db.resolve_temae("temae.urasenke.karamono").unwrap();
         assert_eq!(r.axes.tea.as_deref(), Some("koicha"));
-        let r = db.resolve_temae("temae.kagetsu.koicha").unwrap();
-        assert_eq!(r.temae_id, "temae.kagetsu");
+        let r = db.resolve_temae("temae.urasenke.kagetsu.koicha").unwrap();
+        assert_eq!(r.temae_id, "temae.urasenke.kagetsu");
         assert_eq!(r.axes.tea.as_deref(), Some("koicha"));
-        let r = db.resolve_temae("temae.kinin-kiyotsugu").unwrap();
+        let r = db.resolve_temae("temae.urasenke.kinin-kiyotsugu").unwrap();
         assert_eq!(r.axes.kinin.as_deref(), Some("kiyotsugu"));
-        let r = db.resolve_temae("temae.shin-no-gyo").unwrap();
-        assert_eq!(r.axes.tana.as_deref(), Some("tana.daisu.shin"));
-        assert!(db.vocab_get("tana.daisu.shin").unwrap().is_some());
+        let r = db.resolve_temae("temae.urasenke.shin-no-gyo").unwrap();
+        assert_eq!(r.axes.tana.as_deref(), Some("tana.urasenke.daisu.shin"));
+        assert!(db.vocab_get("tana.urasenke.daisu.shin").unwrap().is_some());
+        // 御所籠 is an alias of 色紙点
+        let r = db.resolve_temae("temae.urasenke.gosho-kago").unwrap();
+        assert_eq!(r.temae_id, "temae.urasenke.shikishidate");
+        for id in ["homa", "sen-yu", "sanyu", "setsugekka"] {
+            assert!(db.vocab_get(&format!("temae.urasenke.{id}")).unwrap().is_some(), "{id}");
+        }
         assert!(db.vocab_list("tool-cat", false).unwrap().len() >= 7);
+    }
+
+    #[test]
+    fn pinned_rows_survive_pack_upgrade_and_can_be_reset() {
+        let pack = Pack::from_yaml(URASENKE_YAML).unwrap();
+        let db = Db::open_in_memory().unwrap();
+        db.pack_install(&pack).unwrap();
+        let mut row = db.vocab_get("temae.urasenke.karamono").unwrap().unwrap();
+        let mut meta = row.meta.take().unwrap();
+        meta["defaults"]["tea"] = serde_json::Value::String("usucha".into());
+        meta["pinned"] = serde_json::Value::Bool(true);
+        row.meta = Some(meta);
+        db.vocab_upsert(&row).unwrap();
+        let mut newer = pack.clone();
+        newer.version = "999".into();
+        db.pack_install(&newer).unwrap();
+        assert_eq!(db.resolve_temae("temae.urasenke.karamono").unwrap().axes.tea.as_deref(), Some("usucha"));
+        assert!(db.pack_reset_row(&newer, "temae.urasenke.karamono").unwrap());
+        assert_eq!(db.resolve_temae("temae.urasenke.karamono").unwrap().axes.tea.as_deref(), Some("koicha"));
+        assert!(!db.pack_reset_row(&newer, "temae.nope").unwrap());
     }
 
     #[test]
@@ -237,7 +306,7 @@ mod tests {
         let db = Db::open_in_memory().unwrap();
         db.pack_install(&pack).unwrap();
         db.vocab_upsert(&Vocab {
-            id: "temae.my-ikea".into(),
+            id: "temae.user.my-ikea".into(),
             kind: "temae".into(),
             ja: "IKEA棚点前".into(),
             romaji: None,
@@ -252,6 +321,6 @@ mod tests {
         let mut newer = pack.clone();
         newer.version = "999".into();
         assert!(db.pack_install(&newer).unwrap());
-        assert!(db.vocab_get("temae.my-ikea").unwrap().is_some());
+        assert!(db.vocab_get("temae.user.my-ikea").unwrap().is_some());
     }
 }

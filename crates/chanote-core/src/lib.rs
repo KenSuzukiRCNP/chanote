@@ -18,6 +18,7 @@ pub mod backup;
 pub mod db;
 pub mod export;
 pub mod import;
+pub mod migrate;
 pub mod model;
 pub mod pack;
 pub mod ranking;

@@ -61,6 +61,8 @@ Design rules that keep the code easy to change:
 
 Releases are built by GitHub Actions from a `v*` tag (`.github/workflows/release.yml`);
 `scripts/bump-version.sh X.Y.Z` sets the version in the three places that must agree.
+Before tagging, move the `[Unreleased]` items in [CHANGELOG.md](CHANGELOG.md) under a new
+version heading with the date, and add the version's link at the bottom of the file.
 
 ## Icon
 

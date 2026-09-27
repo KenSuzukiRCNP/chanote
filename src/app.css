@@ -20,7 +20,7 @@ body {
 input, textarea, select { -webkit-user-select: text; user-select: text; }
 
 @layer components {
-.btn { @apply inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-sm border border-line bg-white hover:bg-stone-50 active:bg-stone-100 transition; }
+.btn { @apply inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-sm border border-line bg-white hover:bg-stone-50 active:bg-stone-100 transition whitespace-nowrap; }
 .btn-primary { @apply bg-matcha text-white border-matcha hover:bg-matcha-deep; }
 .card { @apply rounded-lg border border-line bg-white p-4; }
 .label { @apply text-xs text-stone-500 mb-0.5; }

@@ -5,7 +5,8 @@ use crate::{Db, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-pub const SCHEMA_VERSION: u32 = 1;
+/// 1: v0.1–0.2 (unscoped pack ids). 2: v0.3+ (pack-scoped ids `temae.<pack>.<id>`).
+pub const SCHEMA_VERSION: u32 = 2;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ExportDoc {
@@ -197,8 +198,8 @@ mod tests {
             online: true,
             note: Some("memo, with \"quotes\"".into()),
             temae: vec![Temae {
-                temae_id: Some("temae.kagetsu".into()),
-                temae_alias_id: Some("temae.kagetsu.koicha".into()),
+                temae_id: Some("temae.urasenke.kagetsu".into()),
+                temae_alias_id: Some("temae.urasenke.kagetsu.koicha".into()),
                 host_id: Some(me.clone()),
                 my_role: Some("teishu".into()),
                 my_role_note: Some("月".into()),
@@ -217,7 +218,7 @@ mod tests {
         assert_eq!(doc.schema_version, SCHEMA_VERSION);
         assert_eq!(doc.sessions.len(), 1);
         assert!(doc.sessions[0].online);
-        assert!(doc.vocab.iter().any(|v| v.id == "temae.kagetsu"));
+        assert!(doc.vocab.iter().any(|v| v.id == "temae.urasenke.kagetsu"));
 
         let csv = db.export_csv().unwrap();
         let lines: Vec<&str> = csv.split("\r\n").collect();

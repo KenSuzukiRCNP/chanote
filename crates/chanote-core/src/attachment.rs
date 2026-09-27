@@ -78,12 +78,7 @@ impl Db {
         }
 
         // thumbnail (best effort: unsupported formats just have no thumb)
-        let thumb_dir = data_dir.join("attachments/thumbs");
-        std::fs::create_dir_all(&thumb_dir)?;
-        if let Ok(img) = image::open(&dst) {
-            let t = img.thumbnail(THUMB_MAX, THUMB_MAX);
-            let _ = t.to_rgb8().save(thumb_dir.join(format!("att-{id}.jpg")));
-        }
+        let _ = make_thumbnail(&dst, &thumb_path(data_dir, id));
 
         self.conn().execute("UPDATE attachment SET path = ?2 WHERE id = ?1", params![id, rel])?;
         self.attachment_get(id)?.ok_or_else(|| Error::Other("attachment vanished".into()))
@@ -138,6 +133,50 @@ impl Db {
         )?;
         let rows = st.query_map([], |r| Ok((r.get(0)?, r.get(1)?)))?;
         Ok(rows.collect::<rusqlite::Result<_>>()?)
+    }
+}
+
+/// Decode an image honouring its EXIF orientation (phone photos are often stored
+/// rotated with an orientation tag; viewers apply it, so we must too).
+pub fn open_oriented(path: &Path) -> Result<image::DynamicImage> {
+    use image::ImageDecoder;
+    let mut dec = image::ImageReader::open(path)?.with_guessed_format()?.into_decoder()
+        .map_err(|e| Error::Other(format!("decode: {e}")))?;
+    let orientation = dec.orientation().unwrap_or(image::metadata::Orientation::NoTransforms);
+    let mut img = image::DynamicImage::from_decoder(dec).map_err(|e| Error::Other(format!("decode: {e}")))?;
+    img.apply_orientation(orientation);
+    Ok(img)
+}
+
+/// Write a JPEG thumbnail (long side THUMB_MAX) for `src` at `thumb`.
+pub fn make_thumbnail(src: &Path, thumb: &Path) -> Result<()> {
+    if let Some(dir) = thumb.parent() {
+        std::fs::create_dir_all(dir)?;
+    }
+    let img = open_oriented(src)?;
+    let t = img.thumbnail(THUMB_MAX, THUMB_MAX);
+    t.to_rgb8().save(thumb).map_err(|e| Error::Other(format!("thumbnail: {e}")))?;
+    Ok(())
+}
+
+impl Db {
+    /// Regenerate every thumbnail (after the orientation fix, or if thumbs were lost).
+    /// Returns (ok, failed).
+    pub fn attachment_rebuild_thumbs(&self, data_dir: &Path) -> Result<(usize, usize)> {
+        let rows: Vec<(i64, String)> = {
+            let conn = self.conn();
+            let mut st = conn.prepare("SELECT id, path FROM attachment")?;
+            let v = st.query_map([], |r| Ok((r.get(0)?, r.get(1)?)))?.collect::<rusqlite::Result<Vec<_>>>()?;
+            v
+        };
+        let (mut ok, mut bad) = (0, 0);
+        for (id, rel) in rows {
+            match make_thumbnail(&data_dir.join(rel), &thumb_path(data_dir, id)) {
+                Ok(()) => ok += 1,
+                Err(_) => bad += 1,
+            }
+        }
+        Ok((ok, bad))
     }
 }
 
@@ -224,6 +263,42 @@ mod tests {
         db.attachment_delete(dir.path(), a.id).unwrap();
         assert!(!dir.path().join(&a.path).exists());
         assert!(db.attachment_list(sid).unwrap().is_empty());
+    }
+
+    /// A landscape JPEG tagged Orientation=6 (rotate 90° CW) must yield a portrait thumbnail.
+    #[test]
+    fn thumbnail_honours_exif_orientation() {
+        let dir = tempfile::tempdir().unwrap();
+        let src = dir.path().join("rot.jpg");
+        // write 400x200 JPEG, then splice in an EXIF APP1 segment with Orientation=6
+        let mut buf = std::io::Cursor::new(Vec::new());
+        image::RgbImage::from_fn(400, 200, |x, _| image::Rgb([(x % 255) as u8, 90, 90]))
+            .write_to(&mut buf, image::ImageFormat::Jpeg).unwrap();
+        let jpeg = buf.into_inner();
+        // minimal EXIF: TIFF header (II), one IFD entry 0x0112 (Orientation) SHORT = 6
+        let tiff: Vec<u8> = vec![
+            0x49, 0x49, 0x2A, 0x00, 0x08, 0x00, 0x00, 0x00, // II*\0, IFD at 8
+            0x01, 0x00,                                     // 1 entry
+            0x12, 0x01, 0x03, 0x00, 0x01, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00,                         // next IFD = 0
+        ];
+        let mut app1 = vec![0xFF, 0xE1];
+        let len = (tiff.len() + 6 + 2) as u16;
+        app1.extend_from_slice(&len.to_be_bytes());
+        app1.extend_from_slice(b"Exif\0\0");
+        app1.extend_from_slice(&tiff);
+        let mut out = Vec::new();
+        out.extend_from_slice(&jpeg[..2]);   // SOI
+        out.extend_from_slice(&app1);
+        out.extend_from_slice(&jpeg[2..]);
+        std::fs::write(&src, out).unwrap();
+
+        let db = Db::open_in_memory().unwrap();
+        let sid = db.session_save(&Session { date: Some("2026-09-01".into()), ..Default::default() }).unwrap();
+        let a = db.attachment_add(dir.path(), sid, &src).unwrap();
+        let thumb = image::open(thumb_path(dir.path(), a.id)).unwrap();
+        assert!(thumb.height() > thumb.width(), "thumb {}x{}", thumb.width(), thumb.height());
+        assert_eq!(db.attachment_rebuild_thumbs(dir.path()).unwrap(), (1, 0));
     }
 
     #[test]

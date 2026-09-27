@@ -46,12 +46,19 @@ tool_categories:
   - { id: chawan, ja: 茶碗, romaji: chawan, en: Tea bowl }
 ```
 
+### Ids in the app
+
+Inside the app, ids are scoped by pack: `hiradate` in `omotesenke.yaml` becomes
+`temae.omotesenke.hiradate`, categories `temae-cat.omotesenke.hira`, shelves
+`tana.omotesenke.daisu`. Two schools can therefore both have a `karamono` without
+colliding. Pack authors never write the prefix; the loader adds it.
+
 ### Axis values usable in `defaults` / `modifiers`
 
 | key | values |
 |---|---|
 | `tea` | `koicha`, `usucha`, `tsuzuki` (thick then thin), `"-"` (no tea) |
-| `tana` | `tana.<id>` from this pack, or `"-"` for carried-in (運び) |
+| `tana` | a shelf id from this pack (`daisu.shin`; the older `tana.daisu.shin` spelling is also accepted), or `"-"` for carried-in (運び) |
 | `hearth` | `ro`, `furo`, `binkake`, `nakaoki`, `tsurigama`, `dairo`, `sukigi`, `other` |
 | `katte` | `jun`, `gyaku` |
 | `room` | `koma`, `yojohan`, `hiroma` |
@@ -79,3 +86,10 @@ Defaults are suggestions — the user can always change them on the record.
 
 Loading a pack other than Urasenke from the app itself is on the roadmap; until then a pack
 is bundled at build time.
+
+## Getting a missing procedure into the bundled pack
+
+Add it in the app (Lists → Temae → *Add temae*), then press **YAML** on the row: the
+snippet is copied to the clipboard in pack format. Paste it into an issue or a pull
+request against `packs/<school>.yaml`. Rows you edit in the app are kept even when the
+pack is updated later (they are marked *edited*; *Reset to pack* restores the pack's values).

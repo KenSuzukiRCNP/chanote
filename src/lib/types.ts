@@ -212,3 +212,27 @@ export interface ImportReport {
 export const TSUKIMONO = [
   "koicha", "sumi", "kinin-kiyotsugu", "tsubokazari", "musubi-fukusa", "jikukazari", "kou", "nagekomi",
 ] as const;
+
+export interface SessionFilter {
+  temae?: string[];
+  since?: string | null;
+  until?: string | null;
+  place_id?: string | null;
+  teacher_id?: string | null;
+  persons?: string[];
+  tools?: string[];
+  my_role?: string | null;
+  text?: string | null;
+}
+
+export interface ImportOptions {
+  self_as?: string | null;
+  original_self_name?: string | null;
+  include?: number[] | null;
+}
+export interface PreviewPerson { id: string; name: string; is_self: boolean; n: number }
+export interface PreviewRow {
+  index: number; date: string | null; date_prec: string; place: string; kind: string;
+  summary: string; n_temae: number; duplicate_of: number | null;
+}
+export interface ImportPreview { persons: PreviewPerson[]; rows: PreviewRow[]; vocab_new: number; schema_version: number }

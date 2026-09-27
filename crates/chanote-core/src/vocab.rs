@@ -195,28 +195,28 @@ mod tests {
     fn alias_resolution_overlays_defaults() {
         let db = Db::open_in_memory().unwrap();
         db.vocab_upsert(&v(
-            "temae.kagetsu",
+            "temae.urasenke.kagetsu",
             "temae",
             "花月之式",
             json!({"category":"shichijishiki","defaults":{"tea":"usucha","tana":"-"}}),
         ))
         .unwrap();
         db.vocab_upsert(&v(
-            "temae.kagetsu.koicha",
+            "temae.urasenke.kagetsu.koicha",
             "temae",
             "濃茶付花月",
-            json!({"alias_of":"temae.kagetsu","modifiers":{"tea":"koicha","tsukimono":["koicha"]}}),
+            json!({"alias_of":"temae.urasenke.kagetsu","modifiers":{"tea":"koicha","tsukimono":["koicha"]}}),
         ))
         .unwrap();
 
-        let r = db.resolve_temae("temae.kagetsu.koicha").unwrap();
-        assert_eq!(r.temae_id, "temae.kagetsu");
-        assert_eq!(r.temae_alias_id.as_deref(), Some("temae.kagetsu.koicha"));
+        let r = db.resolve_temae("temae.urasenke.kagetsu.koicha").unwrap();
+        assert_eq!(r.temae_id, "temae.urasenke.kagetsu");
+        assert_eq!(r.temae_alias_id.as_deref(), Some("temae.urasenke.kagetsu.koicha"));
         assert_eq!(r.axes.tea.as_deref(), Some("koicha"));
         assert_eq!(r.axes.tana.as_deref(), Some("-")); // inherited
         assert_eq!(r.axes.tsukimono, Some(vec!["koicha".to_string()]));
 
-        let r = db.resolve_temae("temae.kagetsu").unwrap();
+        let r = db.resolve_temae("temae.urasenke.kagetsu").unwrap();
         assert_eq!(r.temae_alias_id, None);
         assert_eq!(r.axes.tea.as_deref(), Some("usucha"));
     }
@@ -229,7 +229,7 @@ mod tests {
         db.vocab_upsert(&v("person.x", "person", "Anna", json!({}))).unwrap();
         db.vocab_upsert(&v("person.y", "person", "Marco", json!({}))).unwrap();
         // pack row → refused
-        assert!(db.vocab_delete("temae.karamono").is_err());
+        assert!(db.vocab_delete("temae.urasenke.karamono").is_err());
         assert!(db.vocab_delete(&me).is_err());
         // used row → InUse
         db.session_save(&crate::model::Session {

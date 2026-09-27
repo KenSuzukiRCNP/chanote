@@ -25,14 +25,18 @@ const mk = (id, kind, x, parent, sort, meta) => vocab.push({
   sort, origin, archived: false, meta: meta ?? null,
 });
 mk(`school.${pack.id}`, "school", pack.name, null, 0, { version: pack.version });
-pack.categories.forEach((c, i) => mk(`temae-cat.${c.id}`, "temae-cat", c, c.parent ? `temae-cat.${c.parent}` : null, i));
-pack.temae.forEach((t, i) => mk(`temae.${t.id}`, "temae", t, t.category ? `temae-cat.${t.category}` : null, i, {
+// ids are pack-scoped (see crates/chanote-core/src/pack.rs)
+const P = pack.id;
+const tid = (id) => `temae.${P}.${id}`, cid = (id) => `temae-cat.${P}.${id}`, tanaId = (id) => `tana.${P}.${id.replace(/^tana\./, "")}`;
+const axes = (a) => a ? { ...a, ...(a.tana && a.tana !== "-" && a.tana !== "?" ? { tana: tanaId(a.tana) } : {}) } : a;
+pack.categories.forEach((c, i) => mk(cid(c.id), "temae-cat", c, c.parent ? cid(c.parent) : null, i));
+pack.temae.forEach((t, i) => mk(tid(t.id), "temae", t, t.category ? cid(t.category) : null, i, {
   ...(t.category ? { category: t.category } : {}),
-  ...(t.defaults ? { defaults: t.defaults } : {}),
-  ...(t.alias_of ? { alias_of: `temae.${t.alias_of}` } : {}),
-  ...(t.modifiers ? { modifiers: t.modifiers } : {}),
+  ...(t.defaults ? { defaults: axes(t.defaults) } : {}),
+  ...(t.alias_of ? { alias_of: tid(t.alias_of) } : {}),
+  ...(t.modifiers ? { modifiers: axes(t.modifiers) } : {}),
 }));
-pack.tana.forEach((x, i) => mk(`tana.${x.id}`, "tana", x, x.parent ? `tana.${x.parent}` : null, i));
+pack.tana.forEach((x, i) => mk(tanaId(x.id), "tana", x, x.parent ? tanaId(x.parent) : null, i));
 pack.hearth.forEach((x, i) => mk(`hearth.${x.id}`, "hearth", x, null, i));
 (pack.tool_categories ?? []).forEach((x, i) => mk(`tool-cat.${x.id}`, "tool-cat", x, null, i));
 
@@ -70,10 +74,22 @@ const seasonHearth = (m) => (m >= 5 && m <= 10 ? "furo" : "ro");
 const resolve = (id) => {
   const t = pack.temae.find((x) => x.id === id);
   const main = t.alias_of ? pack.temae.find((x) => x.id === t.alias_of) : t;
-  const axes = { ...(main.defaults ?? {}), ...(t.modifiers ?? {}) };
-  return { temae_id: `temae.${main.id}`, temae_alias_id: t.alias_of ? `temae.${t.id}` : null, axes };
+  const ax = axes({ ...(main.defaults ?? {}), ...(t.modifiers ?? {}) });
+  return { temae_id: tid(main.id), temae_alias_id: t.alias_of ? tid(t.id) : null, axes: ax };
 };
-const tanas = ["tana.marujoku", "tana.kuwa-kojoku", "tana.koko-dana", "tana.yoshino-dana", "tana.nagaita", "tana.tabi-dansu"];
+const REMARKS = [
+  "柄杓を置くとき手首が上がる。肘から動かすこと。",
+  "茶巾のたたみ直しが雑。角を揃えて。",
+  "茶杓を清めるあと、帛紗の扱いを丁寧に。",
+  "水指の蓋を開けるとき音を立てない。",
+  "濃茶の練りが固い。湯を少し多めに。",
+  "居ずまいを直すタイミングが遅い。",
+  "建水を引くとき膝行が浅い。",
+  "茶碗を出す位置が近すぎる。畳の縁から十六目。",
+  "拝見に出すときの向きを確認。",
+  "帛紗さばきの四方さばきをもう一度復習。",
+];
+const tanas = ["marujoku", "kuwa-kojoku", "koko-dana", "yoshino-dana", "nagaita", "tabi-dansu"].map(tanaId);
 const students = ["person.sato", "person.tanaka", "person.anna", "person.marco", "person.suzuki"];
 
 function temaeRow(id, date, host, mine) {
@@ -102,7 +118,8 @@ function temaeRow(id, date, host, mine) {
     row.tools.push({ tool_id: "tool.shifuku-hatsushimo", name_free: null, external_ref: null });
     row.tools.push({ tool_id: pick(["tool.chawan-kuro", "tool.chawan-hagi"]), name_free: null, external_ref: null });
   }
-  if (r.temae_id === "temae.kagetsu" && mine) row.my_role_note = pick(["月", "花", "一", "二", "三"]);
+  if (r.temae_id === tid("kagetsu") && mine) row.my_role_note = pick(["月", "花", "一", "二", "三"]);
+  if (mine && chance(0.35)) row.note = pick(REMARKS);
   return row;
 }
 
@@ -156,7 +173,7 @@ sessions.push({
   temae: [{ ...temaeRow("hiradate.usucha", "2024-06-01", "person.self", true), tana_id: "?", hearth: "furo", persons: [], tools: [] }],
 });
 
-const doc = { app: "chanote", schema_version: 1, exported_at: "2026-09-20T00:00:00Z", vocab, sessions };
+const doc = { app: "chanote", schema_version: 2, exported_at: "2026-09-20T00:00:00Z", vocab, sessions };
 fs.mkdirSync(path.join(root, "samples"), { recursive: true });
 fs.writeFileSync(path.join(root, "samples/sample-data.json"), JSON.stringify(doc, null, 1) + "\n");
 console.log(`sessions: ${sessions.length}, temae: ${sessions.reduce((a, s) => a + s.temae.length, 0)}, vocab: ${vocab.length}`);

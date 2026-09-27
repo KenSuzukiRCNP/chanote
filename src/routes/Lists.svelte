@@ -4,9 +4,10 @@
   // (people), and moved up/down. Temae tab adds aliases of pack temae with modifiers.
   import { api } from "$lib/api";
   import { t, term, axisLabel } from "$lib/i18n.svelte";
-  import { loadVocab, vocab, active } from "$lib/vocab.svelte";
+  import { loadVocab, vocab, active, packName } from "$lib/vocab.svelte";
   import { NONE, UNKNOWN } from "$lib/types";
   import type { Vocab, AxisValues } from "$lib/types";
+  import TemaeListEditor from "./TemaeListEditor.svelte";
 
   const kinds = ["place", "person", "tana", "tool", "temae"];
   let kind = $state("place");
@@ -168,55 +169,7 @@
 </div>
 
 {#if kind === "temae"}
-  <div class="card max-w-3xl mb-4">
-    <div class="label">{t("lists.newAlias")}</div>
-    <p class="text-xs text-stone-500 mb-2">{t("lists.aliasHelp")}</p>
-    <div class="grid grid-cols-3 gap-2 mb-2">
-      <label><div class="label">{t("lists.nameJa")}</div><input class="field" bind:value={aliasJa} placeholder="長板濃茶" /></label>
-      <label><div class="label">{t("lists.nameLatin")}</div><input class="field" bind:value={aliasRomaji} /></label>
-      <label><div class="label">{t("lists.aliasOf")}</div>
-        <select class="field" bind:value={aliasOf}>
-          <option value="">—</option>
-          {#each mainTemae as v}<option value={v.id}>{term(v)}</option>{/each}
-        </select></label>
-    </div>
-    <div class="grid grid-cols-4 gap-2 mb-2">
-      <label><div class="label">{t("temae.tea")}</div>
-        <select class="field" bind:value={aliasMods.tea}>
-          <option value={undefined}>—</option>
-          {#each ["koicha", "usucha", "tsuzuki", NONE] as x}<option value={x}>{axisLabel("tea", x)}</option>{/each}
-        </select></label>
-      <label><div class="label">{t("temae.tana")}</div>
-        <select class="field" bind:value={aliasMods.tana}>
-          <option value={undefined}>—</option>
-          <option value={NONE}>{axisLabel("tana", NONE)}</option>
-          {#each tanas as x}<option value={x.id}>{x.parent_id ? "　" : ""}{term(x)}</option>{/each}
-        </select></label>
-      <label><div class="label">{t("temae.hearth")}</div>
-        <select class="field" bind:value={aliasMods.hearth}>
-          <option value={undefined}>—</option>
-          {#each active("hearth") as h}<option value={h.id.replace("hearth.", "")}>{term(h)}</option>{/each}
-        </select></label>
-      <label><div class="label">{t("temae.kinin")}</div>
-        <select class="field" bind:value={aliasMods.kinin}>
-          <option value={undefined}>—</option>
-          {#each [NONE, "kinindate", "kiyotsugu"] as x}<option value={x}>{axisLabel("kinin", x)}</option>{/each}
-        </select></label>
-      <label><div class="label">{t("temae.katte")}</div>
-        <select class="field" bind:value={aliasMods.katte}>
-          <option value={undefined}>—</option>
-          {#each ["jun", "gyaku"] as x}<option value={x}>{axisLabel("katte", x)}</option>{/each}
-        </select></label>
-      <label><div class="label">{t("temae.room")}</div>
-        <select class="field" bind:value={aliasMods.room}>
-          <option value={undefined}>—</option>
-          {#each ["koma", "yojohan", "hiroma"] as x}<option value={x}>{axisLabel("room", x)}</option>{/each}
-        </select></label>
-      <label class="col-span-2"><div class="label">{t("temae.tsukimono")} (koicha, sumi, …)</div>
-        <input class="field" bind:value={aliasTsukimono} placeholder="koicha" /></label>
-    </div>
-    <div class="flex justify-end"><button class="btn btn-primary" onclick={addAlias} disabled={!(aliasJa.trim() || aliasRomaji.trim()) || !aliasOf}>＋ {t("lists.addAlias")}</button></div>
-  </div>
+  <TemaeListEditor {showArchived} />
 {:else}
   <div class="card max-w-3xl flex gap-2 items-end mb-4">
     <label class="grow"><div class="label">{t("lists.nameJa")}</div><input class="field" bind:value={newJa} onkeydown={(e) => e.key === "Enter" && add()} /></label>
@@ -238,6 +191,7 @@
   </div>
 {/if}
 
+{#if kind !== "temae"}
 {#if delMsg}<p class="text-sm text-clay mb-2">{delMsg}</p>{/if}
 <table class="max-w-3xl w-full text-sm">
   <tbody>
@@ -284,7 +238,7 @@
             {/if}
           </td>
           <td class="py-1 pr-3 text-stone-400 text-xs">{v.en ?? ""}</td>
-          <td class="py-1 pr-3 text-stone-400 text-xs">{v.origin.startsWith("pack:") ? t("lists.origin.pack") : t("lists.origin.user")}</td>
+          <td class="py-1 pr-3 text-stone-400 text-xs">{packName(v) ?? t("lists.origin.user")}</td>
         {/if}
         <td class="py-1 text-right whitespace-nowrap text-xs text-stone-400">
           {#if !isSelf(v) && editing !== v.id}
@@ -301,3 +255,4 @@
     {/each}
   </tbody>
 </table>
+{/if}
