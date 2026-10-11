@@ -22,6 +22,20 @@ pub struct Pack {
     /// Utensil categories (茶碗, 薄器, ...). Users add tools under these.
     #[serde(default)]
     pub tool_categories: Vec<PackItem>,
+    /// Kinds of 茶事 / 茶会 (form = chaji | chakai).
+    #[serde(default)]
+    pub event_kinds: Vec<PackEvent>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PackEvent {
+    pub id: String,
+    pub form: String,
+    pub ja: String,
+    #[serde(default)]
+    pub romaji: Option<String>,
+    #[serde(default)]
+    pub en: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -99,6 +113,11 @@ impl Pack {
                 }
             }
         }
+        for e in &self.event_kinds {
+            if e.form != "chaji" && e.form != "chakai" {
+                return Err(Error::Pack(format!("event {}: form must be chaji or chakai", e.id)));
+            }
+        }
         Ok(())
     }
 
@@ -111,6 +130,9 @@ impl Pack {
     }
     pub fn tana_id(&self, id: &str) -> String {
         format!("tana.{}.{}", self.id, id)
+    }
+    pub fn event_id(&self, id: &str) -> String {
+        format!("event.{}.{}", self.id, id)
     }
     /// Axis values as written in the pack (`tana: daisu.shin` or `tana: "-"`) → stored form.
     fn axes(&self, a: &Option<AxisValues>) -> Option<AxisValues> {
@@ -181,6 +203,12 @@ impl Pack {
         for (i, x) in self.tool_categories.iter().enumerate() {
             out.push(mk(
                 format!("tool-cat.{}", x.id), "tool-cat", &x.ja, &x.romaji, &x.en, None, i as i64, None,
+            ));
+        }
+        for (i, x) in self.event_kinds.iter().enumerate() {
+            out.push(mk(
+                self.event_id(&x.id), "event-kind", &x.ja, &x.romaji, &x.en, None, i as i64,
+                Some(json!({"form": x.form})),
             ));
         }
         out
@@ -278,6 +306,16 @@ mod tests {
             assert!(db.vocab_get(&format!("temae.urasenke.{id}")).unwrap().is_some(), "{id}");
         }
         assert!(db.vocab_list("tool-cat", false).unwrap().len() >= 7);
+        for id in ["shouwa", "seiyu", "hanayose"] {
+            assert!(db.vocab_get(&format!("temae.urasenke.{id}")).unwrap().is_some(), "{id}");
+        }
+        let r = db.resolve_temae("temae.urasenke.shaza.higashi-kinin").unwrap();
+        assert_eq!(r.temae_id, "temae.urasenke.shaza");
+        assert_eq!(r.axes.kinin.as_deref(), Some("kinindate"));
+        let ev = db.vocab_list("event-kind", false).unwrap();
+        assert!(ev.len() >= 15);
+        assert_eq!(ev[0].id, "event.urasenke.shogo");
+        assert_eq!(ev[0].meta.as_ref().unwrap()["form"], "chaji");
     }
 
     #[test]

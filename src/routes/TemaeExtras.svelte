@@ -3,15 +3,21 @@
   // every field is optional and seats can be partially filled.
   import { t, term } from "$lib/i18n.svelte";
   import { ranked, toolGroups, vocab } from "$lib/vocab.svelte";
-  import { TSUKIMONO, type Temae, type MyRole } from "$lib/types";
+  import { TSUKIMONO, MY_ROLES, type Temae, type MyRole, type TemaePerson } from "$lib/types";
 
-  let { temae, isKagetsu }: { temae: Temae; isKagetsu: boolean } = $props();
+  let { temae, isKagetsu, inherited = [] }: { temae: Temae; isKagetsu: boolean; inherited?: TemaePerson[] } = $props();
+  /** no rows of its own → shows (and statistics use) the event's participants */
+  const inherits = $derived(temae.persons.length === 0);
+  function makeOwn() {
+    temae.persons = inherited.map((p) => ({ ...p }));
+    if (temae.persons.length === 0) addPerson();
+  }
 
   const persons = $derived(ranked("person").filter((p) => p.id !== vocab.selfId));
   const groups = $derived(toolGroups());
   const partRoles = ["kyaku", "hanto", "mizuya", "kengaku"] as const;
-  const myRoles: MyRole[] = ["teishu", "kyaku", "shokyaku", "hanto", "mizuya", "kengaku", "-"];
-  const selfIsGuest = $derived(temae.my_role === "kyaku" || temae.my_role === "shokyaku");
+  const myRoles: MyRole[] = MY_ROLES;
+  const selfIsGuest = $derived(temae.my_role === "kyaku" || temae.my_role === "shokyaku" || temae.my_role === "tsume");
 
   function nextSeat(): number {
     const used = new Set<number>(temae.persons.map((p) => p.seat).filter((x): x is number => x != null));
@@ -29,7 +35,7 @@
   function setMyRole(role: MyRole | null) {
     temae.my_role = role;
     if (role === "shokyaku") temae.my_seat = 1;
-    else if (role === "kyaku") { if (temae.my_seat == null) temae.my_seat = nextSeat(); }
+    else if (role === "kyaku" || role === "tsume") { if (temae.my_seat == null) temae.my_seat = nextSeat(); }
     else temae.my_seat = null;
   }
   function addTool(toolId: string | null = null) {
@@ -71,7 +77,12 @@
     <span class="label mb-0">{t("temae.participants")}</span>
     <span class="text-[11px] text-stone-400">{t("temae.seatHelp")}</span>
     <span class="grow"></span>
-    <button class="btn py-0.5 text-xs" onclick={addPerson}>＋ {t("temae.addPerson")}</button>
+    {#if inherits}
+      <button class="btn py-0.5 text-xs" onclick={makeOwn}>{t("temae.ownPersons")}</button>
+    {:else}
+      {#if inherited.length}<button class="btn py-0.5 text-xs" onclick={() => (temae.persons = [])}>{t("temae.backToInherited")}</button>{/if}
+      <button class="btn py-0.5 text-xs" onclick={addPerson}>＋ {t("temae.addPerson")}</button>
+    {/if}
   </div>
   <!-- self: always the first row, bound to my_role / my_seat -->
   <div class="grid grid-cols-[3rem_1fr_1fr_6rem_auto_1fr_auto] gap-1 items-center mb-1 text-matcha-deep">
@@ -86,6 +97,14 @@
     <input class="field py-0.5" placeholder={t("temae.roleNote")} bind:value={temae.my_role_note} />
     <span></span>
   </div>
+  {#if inherits}
+    <div class="text-xs text-stone-500 pl-1">
+      {inherited.length ? t("temae.inherited", { n: inherited.length }) : t("temae.inheritedNone")}
+      {#if inherited.length}
+        <span class="text-stone-400">: {inherited.map((p) => `${p.seat != null ? p.seat + "." : ""}${term(vocab.byId[p.person_id ?? ""]) || p.name_free || "—"}${p.role !== "kyaku" ? "(" + t("role." + p.role) + ")" : ""}`).join("、")}</span>
+      {/if}
+    </div>
+  {/if}
   {#each temae.persons as p, i (i)}
     <div class="grid grid-cols-[3rem_1fr_1fr_6rem_auto_1fr_auto] gap-1 items-center mb-1">
       <input type="number" min="1" class="field py-0.5" placeholder="#" bind:value={p.seat} title={t("temae.seat")} />

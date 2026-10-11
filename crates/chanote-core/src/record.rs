@@ -24,6 +24,15 @@ pub struct SessionFilter {
     pub my_role: Option<String>,
     /// free-text search in notes (session note, temae note)
     pub text: Option<String>,
+    /// session form: temae | chaji | chakai | koshukai | "?"
+    #[serde(default)]
+    pub form: Option<String>,
+    /// event kind (vocab id)
+    #[serde(default)]
+    pub event_kind: Option<String>,
+    /// Some(true) = lessons only, Some(false) = real events only
+    #[serde(default)]
+    pub practice: Option<bool>,
 }
 
 impl SessionFilter {
@@ -37,7 +46,7 @@ impl Db {
     pub fn session_list(&self, limit: i64, offset: i64) -> Result<Vec<SessionSummary>> {
         let conn = self.conn();
         let mut st = conn.prepare(
-            "SELECT s.id, s.date, s.date_prec, s.place_id, s.kind, s.online,
+            "SELECT s.id, s.date, s.date_prec, s.place_id, s.form, s.event_kind, s.practice, s.my_role, s.online,
                     (SELECT COUNT(*) FROM temae t WHERE t.session_id = s.id) AS n
              FROM session s
              ORDER BY s.date DESC NULLS LAST, s.id DESC
@@ -49,9 +58,12 @@ impl Db {
                 date: r.get(1)?,
                 date_prec: r.get(2)?,
                 place_id: r.get(3)?,
-                kind: r.get(4)?,
-                online: r.get::<_, i64>(5)? != 0,
-                temae_count: r.get(6)?,
+                form: r.get(4)?,
+                event_kind: r.get(5)?,
+                practice: r.get::<_, i64>(6)? != 0,
+                my_role: r.get(7)?,
+                online: r.get::<_, i64>(8)? != 0,
+                temae_count: r.get(9)?,
             })
         })?;
         Ok(rows.collect::<rusqlite::Result<_>>()?)
@@ -60,7 +72,7 @@ impl Db {
     /// Filtered list, newest first. Returns summaries like `session_list`.
     pub fn session_search(&self, f: &SessionFilter, limit: i64, offset: i64) -> Result<Vec<SessionSummary>> {
         let mut sql = String::from(
-            "SELECT s.id, s.date, s.date_prec, s.place_id, s.kind, s.online,
+            "SELECT s.id, s.date, s.date_prec, s.place_id, s.form, s.event_kind, s.practice, s.my_role, s.online,
                     (SELECT COUNT(*) FROM temae t WHERE t.session_id = s.id) AS n
              FROM session s WHERE 1=1",
         );
@@ -68,6 +80,9 @@ impl Db {
         if let Some(x) = &f.since { sql.push_str(" AND s.date >= ?"); args.push(Box::new(x.clone())); }
         if let Some(x) = &f.until { sql.push_str(" AND s.date <= ?"); args.push(Box::new(x.clone())); }
         if let Some(x) = &f.place_id { sql.push_str(" AND s.place_id = ?"); args.push(Box::new(x.clone())); }
+        if let Some(x) = &f.form { sql.push_str(" AND s.form = ?"); args.push(Box::new(x.clone())); }
+        if let Some(x) = &f.event_kind { sql.push_str(" AND s.event_kind = ?"); args.push(Box::new(x.clone())); }
+        if let Some(x) = f.practice { sql.push_str(" AND s.practice = ?"); args.push(Box::new(x as i64)); }
         if let Some(x) = &f.teacher_id {
             sql.push_str(" AND (EXISTS (SELECT 1 FROM session_person sp WHERE sp.session_id = s.id AND sp.role = 'teacher' AND sp.person_id = ?)
                               OR EXISTS (SELECT 1 FROM temae t WHERE t.session_id = s.id AND t.teacher_id = ?))");
@@ -84,7 +99,8 @@ impl Db {
             for x in &f.temae { args.push(Box::new(x.clone())); }
             if let Some(r) = &f.my_role { args.push(Box::new(r.clone())); }
         } else if let Some(r) = &f.my_role {
-            sql.push_str(" AND EXISTS (SELECT 1 FROM temae t WHERE t.session_id = s.id AND t.my_role = ?)");
+            sql.push_str(" AND (s.my_role = ? OR EXISTS (SELECT 1 FROM temae t WHERE t.session_id = s.id AND t.my_role = ?))");
+            args.push(Box::new(r.clone()));
             args.push(Box::new(r.clone()));
         }
         for p in &f.persons {
@@ -116,9 +132,12 @@ impl Db {
                 date: r.get(1)?,
                 date_prec: r.get(2)?,
                 place_id: r.get(3)?,
-                kind: r.get(4)?,
-                online: r.get::<_, i64>(5)? != 0,
-                temae_count: r.get(6)?,
+                form: r.get(4)?,
+                event_kind: r.get(5)?,
+                practice: r.get::<_, i64>(6)? != 0,
+                my_role: r.get(7)?,
+                online: r.get::<_, i64>(8)? != 0,
+                temae_count: r.get(9)?,
             })
         })?;
         Ok(rows.collect::<rusqlite::Result<_>>()?)
@@ -128,7 +147,8 @@ impl Db {
         let conn = self.conn();
         let head = conn
             .query_row(
-                "SELECT id, date, date_prec, place_id, place_note, kind, online, note FROM session WHERE id = ?1",
+                "SELECT id, date, date_prec, place_id, place_note, form, event_kind, practice, my_role, my_seat, online, note
+                 FROM session WHERE id = ?1",
                 [id],
                 |r| {
                     Ok(Session {
@@ -137,11 +157,16 @@ impl Db {
                         date_prec: r.get(2)?,
                         place_id: r.get(3)?,
                         place_note: r.get(4)?,
-                        kind: r.get(5)?,
-                        online: r.get::<_, i64>(6)? != 0,
-                        note: r.get(7)?,
+                        form: r.get(5)?,
+                        event_kind: r.get(6)?,
+                        practice: r.get::<_, i64>(7)? != 0,
+                        my_role: r.get(8)?,
+                        my_seat: r.get(9)?,
+                        online: r.get::<_, i64>(10)? != 0,
+                        note: r.get(11)?,
                         persons: vec![],
                         temae: vec![],
+                        kind: None,
                     })
                 },
             )
@@ -149,11 +174,18 @@ impl Db {
         let Some(mut s) = head else { return Ok(None) };
 
         let mut st = conn.prepare(
-            "SELECT person_id, name_free, role FROM session_person WHERE session_id = ?1 ORDER BY ord, id",
+            "SELECT person_id, name_free, role, seat, is_last, role_note FROM session_person WHERE session_id = ?1 ORDER BY ord, id",
         )?;
         s.persons = st
             .query_map([id], |r| {
-                Ok(SessionPerson { person_id: r.get(0)?, name_free: r.get(1)?, role: r.get(2)? })
+                Ok(SessionPerson {
+                    person_id: r.get(0)?,
+                    name_free: r.get(1)?,
+                    role: r.get(2)?,
+                    seat: r.get(3)?,
+                    is_last: r.get::<_, i64>(4)? != 0,
+                    role_note: r.get(5)?,
+                })
             })?
             .collect::<rusqlite::Result<_>>()?;
 
@@ -234,18 +266,21 @@ impl Db {
         let id = match s.id {
             None => {
                 tx.execute(
-                    "INSERT INTO session (date, date_prec, place_id, place_note, kind, online, note)
-                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
-                    params![s.date, s.date_prec, s.place_id, s.place_note, s.kind, s.online as i64, s.note],
+                    "INSERT INTO session (date, date_prec, place_id, place_note, form, event_kind, practice, my_role, my_seat, online, note)
+                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
+                    params![s.date, s.date_prec, s.place_id, s.place_note, s.form, s.event_kind, s.practice as i64,
+                            s.my_role, s.my_seat, s.online as i64, s.note],
                 )?;
                 tx.last_insert_rowid()
             }
             Some(id) => {
                 let n = tx.execute(
-                    "UPDATE session SET date=?2, date_prec=?3, place_id=?4, place_note=?5, kind=?6, online=?7, note=?8,
+                    "UPDATE session SET date=?2, date_prec=?3, place_id=?4, place_note=?5, form=?6, event_kind=?7, practice=?8,
+                            my_role=?9, my_seat=?10, online=?11, note=?12,
                             updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
                      WHERE id = ?1",
-                    params![id, s.date, s.date_prec, s.place_id, s.place_note, s.kind, s.online as i64, s.note],
+                    params![id, s.date, s.date_prec, s.place_id, s.place_note, s.form, s.event_kind, s.practice as i64,
+                            s.my_role, s.my_seat, s.online as i64, s.note],
                 )?;
                 if n == 0 {
                     return Err(Error::Other(format!("session {id} not found")));
@@ -258,8 +293,9 @@ impl Db {
         };
         for (i, p) in s.persons.iter().enumerate() {
             tx.execute(
-                "INSERT INTO session_person (session_id, person_id, name_free, role, ord) VALUES (?1,?2,?3,?4,?5)",
-                params![id, p.person_id, p.name_free, p.role, i as i64],
+                "INSERT INTO session_person (session_id, person_id, name_free, role, ord, seat, is_last, role_note)
+                 VALUES (?1,?2,?3,?4,?5,?6,?7,?8)",
+                params![id, p.person_id, p.name_free, p.role, i as i64, p.seat, p.is_last as i64, p.role_note],
             )?;
         }
         for (i, t) in s.temae.iter().enumerate() {
@@ -280,9 +316,25 @@ fn validate(s: &Session) -> Result<()> {
         "day" | "month" | "year" | "unknown" => {}
         p => return Err(Error::Other(format!("bad date_prec {p}"))),
     }
-    match s.kind.as_str() {
-        "keiko" | "koshukai" | "honban" => {}
-        k => return Err(Error::Other(format!("bad session kind {k}"))),
+    if !crate::model::SESSION_FORMS.contains(&s.form.as_str()) {
+        return Err(Error::Other(format!("bad session form {}", s.form)));
+    }
+    if let Some(r) = s.my_role.as_deref() {
+        if !crate::model::MY_ROLES.contains(&r) {
+            return Err(Error::Other(format!("bad my_role {r}")));
+        }
+    }
+    for p in &s.persons {
+        if !crate::model::SESSION_ROLES.contains(&p.role.as_str()) {
+            return Err(Error::Other(format!("bad session person role {}", p.role)));
+        }
+    }
+    for t in &s.temae {
+        if let Some(r) = t.my_role.as_deref() {
+            if !crate::model::MY_ROLES.contains(&r) {
+                return Err(Error::Other(format!("bad temae my_role {r}")));
+            }
+        }
     }
     if s.date_prec != "unknown" && s.date.is_none() {
         return Err(Error::Other("date required unless date_prec = unknown".into()));
@@ -367,14 +419,18 @@ mod tests {
             date_prec: "day".into(),
             place_id: Some("place.shofu-an".into()),
             place_note: None,
-            kind: "koshukai".into(),
+            form: "koshukai".into(),
             online: true,
             note: None,
             persons: vec![SessionPerson {
                 person_id: Some("person.yamada".into()),
                 name_free: None,
                 role: "teacher".into(),
+                ..Default::default()
             }],
+            ..Default::default()
+        };
+        let s = Session {
             temae: vec![
                 Temae {
                     temae_id: Some("temae.urasenke.shin-no-gyo".into()),
@@ -401,10 +457,12 @@ mod tests {
                     ..Default::default()
                 },
             ],
+            ..s
         };
         let id = db.session_save(&s).unwrap();
         let back = db.session_get(id).unwrap().unwrap();
-        assert_eq!(back.kind, "koshukai");
+        assert_eq!(back.form, "koshukai");
+        assert!(back.practice);
         assert!(back.online);
         assert_eq!(back.temae.len(), 2);
         assert_eq!(back.temae[0].my_role.as_deref(), Some("kyaku"));
@@ -433,7 +491,7 @@ mod tests {
         let me = db.self_person_id().unwrap();
         let mk = |date: &str, temae: &str, host: &str, role: &str, note: Option<&str>, tool: bool| Session {
             date: Some(date.into()), place_id: Some("place.shofu-an".into()),
-            persons: vec![SessionPerson { person_id: Some("person.yamada".into()), name_free: None, role: "teacher".into() }],
+            persons: vec![SessionPerson { person_id: Some("person.yamada".into()), role: "teacher".into(), ..Default::default() }],
             temae: vec![Temae {
                 temae_id: Some(temae.into()), host_id: Some(host.into()), my_role: Some(role.into()),
                 note: note.map(Into::into),
@@ -464,6 +522,38 @@ mod tests {
         assert_eq!(db.session_search(&f, 100, 0).unwrap().len(), 1);
         let f = SessionFilter { teacher_id: Some("person.yamada".into()), place_id: Some("place.shofu-an".into()), ..Default::default() };
         assert_eq!(db.session_search(&f, 100, 0).unwrap().len(), 3);
+
+        // a real chaji where I was main guest: form / practice / event kind / session my_role filters
+        db.session_save(&Session {
+            date: Some("2026-04-10".into()), form: "chaji".into(), event_kind: Some("event.urasenke.shogo".into()),
+            practice: false, my_role: Some("shokyaku".into()), my_seat: Some(1),
+            persons: vec![
+                SessionPerson { person_id: Some("person.sato".into()), role: "host".into(), ..Default::default() },
+                SessionPerson { person_id: Some("person.yamada".into()), role: "guest".into(), seat: Some(2), is_last: true, ..Default::default() },
+            ],
+            temae: vec![Temae { temae_id: Some("temae.urasenke.karamono".into()), host_id: Some("person.sato".into()), my_role: Some("shokyaku".into()), ..Default::default() }],
+            ..Default::default()
+        }).unwrap();
+        let f = SessionFilter { form: Some("chaji".into()), ..Default::default() };
+        assert_eq!(db.session_search(&f, 100, 0).unwrap().len(), 1);
+        let f = SessionFilter { practice: Some(false), ..Default::default() };
+        assert_eq!(db.session_search(&f, 100, 0).unwrap().len(), 1);
+        let f = SessionFilter { practice: Some(true), ..Default::default() };
+        assert_eq!(db.session_search(&f, 100, 0).unwrap().len(), 3);
+        let f = SessionFilter { event_kind: Some("event.urasenke.shogo".into()), ..Default::default() };
+        assert_eq!(db.session_search(&f, 100, 0).unwrap().len(), 1);
+        let f = SessionFilter { my_role: Some("shokyaku".into()), ..Default::default() };
+        assert_eq!(db.session_search(&f, 100, 0).unwrap().len(), 1);
+        // the roster is searchable like temae participants
+        let f = SessionFilter { persons: vec!["person.sato".into()], ..Default::default() };
+        assert_eq!(db.session_search(&f, 100, 0).unwrap().len(), 2);
+        let back = db.session_get(db.session_search(&SessionFilter { form: Some("chaji".into()), ..Default::default() }, 1, 0).unwrap()[0].id).unwrap().unwrap();
+        assert_eq!(back.persons[1].seat, Some(2));
+        assert!(back.persons[1].is_last);
+        assert_eq!(back.my_seat, Some(1));
+        // bad values are rejected
+        assert!(db.session_save(&Session { date: Some("2026-01-01".into()), form: "picnic".into(), ..Default::default() }).is_err());
+        assert!(db.session_save(&Session { date: Some("2026-01-01".into()), my_role: Some("boss".into()), ..Default::default() }).is_err());
     }
 
     #[test]

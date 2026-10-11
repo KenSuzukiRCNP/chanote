@@ -3,7 +3,7 @@
 // developed and screenshotted without the Rust side.
 
 import type {
-  AppInfo, Attachment, AxisValues, ByRow, CoverageRow, CrossCell, ImportOptions, ImportPreview,
+  AppInfo, Attachment, AxisValues, ByRow, CoverageRow, CrossCell, EventRow, ImportOptions, ImportPreview,
   ImportReport, MonthlyRow, Profile, ProfileInfo, RankRow, ResolvedTemae, Session,
   SessionFilter, SessionSummary, StatsFilter, StatsTotals, Vocab,
 } from "./types";
@@ -47,6 +47,7 @@ export const api = {
 
   statsCoverage: (filter: StatsFilter = {}) => invoke<CoverageRow[]>("stats_coverage", { filter }),
   statsTotals: (filter: StatsFilter = {}) => invoke<StatsTotals>("stats_totals", { filter }),
+  statsEvents: (filter: StatsFilter = {}) => invoke<EventRow[]>("stats_events", { filter }),
 
   /** Write an export file; `path` comes from the native save dialog. */
   exportWrite: (path: string, format: "json" | "csv") =>

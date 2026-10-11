@@ -34,6 +34,9 @@ pub struct StatsFilter {
     pub recent_days: Option<i64>,
     /// Restrict to one place (session.place_id) if set.
     pub place_id: Option<String>,
+    /// Some(true) = lessons / rehearsals only, Some(false) = real events only.
+    #[serde(default)]
+    pub practice: Option<bool>,
 }
 
 impl Db {
@@ -57,10 +60,11 @@ impl Db {
              WHERE (?2 IS NULL OR s.date >= ?2)
                AND (?3 IS NULL OR s.date <= ?3)
                AND (?4 IS NULL OR s.place_id = ?4)
+               AND (?5 IS NULL OR s.practice = ?5)
              GROUP BY t.temae_id, t.temae_alias_id, t.hearth, role_group
              ORDER BY t.temae_id, t.temae_alias_id, t.hearth, role_group",
         )?;
-        let rows = st.query_map(params![recent, f.since, f.until, f.place_id], |r| {
+        let rows = st.query_map(params![recent, f.since, f.until, f.place_id, f.practice.map(|b| b as i64)], |r| {
             Ok(CoverageRow {
                 temae_id: r.get(0)?,
                 alias_id: r.get(1)?,
@@ -82,17 +86,17 @@ impl Db {
             "SELECT
                (SELECT COUNT(*) FROM session s
                  WHERE (?1 IS NULL OR s.date >= ?1) AND (?2 IS NULL OR s.date <= ?2)
-                   AND (?3 IS NULL OR s.place_id = ?3)),
+                   AND (?3 IS NULL OR s.place_id = ?3) AND (?4 IS NULL OR s.practice = ?4)),
                (SELECT COUNT(*) FROM temae t JOIN session s ON s.id = t.session_id
                  WHERE t.my_role = 'teishu'
                    AND (?1 IS NULL OR s.date >= ?1) AND (?2 IS NULL OR s.date <= ?2)
-                   AND (?3 IS NULL OR s.place_id = ?3)),
+                   AND (?3 IS NULL OR s.place_id = ?3) AND (?4 IS NULL OR s.practice = ?4)),
                (SELECT COUNT(*) FROM temae t JOIN session s ON s.id = t.session_id
                  WHERE t.my_role IS NOT NULL AND t.my_role NOT IN ('teishu', '-')
                    AND (?1 IS NULL OR s.date >= ?1) AND (?2 IS NULL OR s.date <= ?2)
-                   AND (?3 IS NULL OR s.place_id = ?3)),
+                   AND (?3 IS NULL OR s.place_id = ?3) AND (?4 IS NULL OR s.practice = ?4)),
                (SELECT MIN(date) FROM session), (SELECT MAX(date) FROM session)",
-            params![f.since, f.until, f.place_id],
+            params![f.since, f.until, f.place_id, f.practice.map(|b| b as i64)],
             |r| {
                 Ok(StatsTotals {
                     sessions: r.get(0)?,
@@ -149,7 +153,10 @@ pub const CROSS_AXES: &[(&str, &str)] = &[
     ("place", "s.place_id"),
     ("my_role", "t.my_role"),
     ("year", "substr(s.date, 1, 4)"),
-    ("session_kind", "s.kind"),
+    ("form", "s.form"),
+    ("event_kind", "s.event_kind"),
+    ("practice", "CASE s.practice WHEN 1 THEN 'practice' ELSE 'real' END"),
+    ("session_my_role", "s.my_role"),
 ];
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -171,11 +178,12 @@ impl Db {
                AND (?1 IS NULL OR s.date >= ?1)
                AND (?2 IS NULL OR s.date <= ?2)
                AND (?3 IS NULL OR s.place_id = ?3)
+               AND (?4 IS NULL OR s.practice = ?4)
              GROUP BY month, hg, rg
              ORDER BY month, hg, rg"
         );
         let mut st = conn.prepare(&sql)?;
-        let rows = st.query_map(params![f.since, f.until, f.place_id], |r| {
+        let rows = st.query_map(params![f.since, f.until, f.place_id, f.practice.map(|b| b as i64)], |r| {
             Ok(MonthlyRow {
                 month: r.get(0)?,
                 hearth: r.get(1)?,
@@ -205,11 +213,12 @@ impl Db {
                AND (?2 IS NULL OR s.date <= ?2)
                AND (?3 IS NULL OR s.place_id = ?3)
                AND (?4 = 0 OR t.my_role = 'teishu')
+               AND (?5 IS NULL OR s.practice = ?5)
              GROUP BY r, c
              ORDER BY r, c"
         );
         let mut st = conn.prepare(&sql)?;
-        let rows = st.query_map(params![f.since, f.until, f.place_id, host_only as i64], |r| {
+        let rows = st.query_map(params![f.since, f.until, f.place_id, host_only as i64, f.practice.map(|b| b as i64)], |r| {
             Ok(CrossCell { row: r.get(0)?, col: r.get(1)?, n: r.get(2)?, last_date: r.get(3)? })
         })?;
         Ok(rows.collect::<rusqlite::Result<_>>()?)
@@ -241,14 +250,14 @@ impl Db {
                        CASE WHEN t.my_role='teishu' THEN 1 ELSE 0 END AS host,
                        CASE WHEN t.my_role IS NOT NULL AND t.my_role NOT IN ('teishu','-') THEN 1 ELSE 0 END AS oth
                 FROM temae t JOIN session s ON s.id = t.session_id
-                WHERE (?1 IS NULL OR s.date >= ?1) AND (?2 IS NULL OR s.date <= ?2) AND (?3 IS NULL OR s.place_id = ?3)
+                WHERE (?1 IS NULL OR s.date >= ?1) AND (?2 IS NULL OR s.date <= ?2) AND (?3 IS NULL OR s.place_id = ?3) AND (?4 IS NULL OR s.practice = ?4)
               ) WHERE k IS NOT NULL GROUP BY k ORDER BY 2 DESC",
             "place" => "SELECT k, COUNT(DISTINCT sid), SUM(host), SUM(oth), MIN(d), MAX(d) FROM (
                 SELECT s.place_id AS k, s.id AS sid, s.date AS d,
                        CASE WHEN t.my_role='teishu' THEN 1 ELSE 0 END AS host,
                        CASE WHEN t.my_role IS NOT NULL AND t.my_role NOT IN ('teishu','-') THEN 1 ELSE 0 END AS oth
                 FROM session s LEFT JOIN temae t ON t.session_id = s.id
-                WHERE (?1 IS NULL OR s.date >= ?1) AND (?2 IS NULL OR s.date <= ?2) AND (?3 IS NULL OR s.place_id = ?3)
+                WHERE (?1 IS NULL OR s.date >= ?1) AND (?2 IS NULL OR s.date <= ?2) AND (?3 IS NULL OR s.place_id = ?3) AND (?4 IS NULL OR s.practice = ?4)
               ) WHERE k IS NOT NULL GROUP BY k ORDER BY 2 DESC",
             // whose temae did I attend (host ≠ me)
             "host" => "SELECT k, COUNT(DISTINCT sid), 0, SUM(oth), MIN(d), MAX(d) FROM (
@@ -257,20 +266,20 @@ impl Db {
                 FROM temae t JOIN session s ON s.id = t.session_id
                 WHERE t.my_role IS NOT NULL AND t.my_role <> 'teishu'
                   AND (t.host_id IS NOT NULL OR t.host_free IS NOT NULL)
-                  AND (?1 IS NULL OR s.date >= ?1) AND (?2 IS NULL OR s.date <= ?2) AND (?3 IS NULL OR s.place_id = ?3)
+                  AND (?1 IS NULL OR s.date >= ?1) AND (?2 IS NULL OR s.date <= ?2) AND (?3 IS NULL OR s.place_id = ?3) AND (?4 IS NULL OR s.practice = ?4)
               ) WHERE k IS NOT NULL GROUP BY k ORDER BY 4 DESC",
             // people who were guests etc. when I was host
             "with" => "SELECT k, COUNT(DISTINCT sid), SUM(host), 0, MIN(d), MAX(d) FROM (
                 SELECT COALESCE(tp.person_id, 'free:' || tp.name_free) AS k, s.id AS sid, s.date AS d, 1 AS host
-                FROM temae_person tp JOIN temae t ON t.id = tp.temae_id JOIN session s ON s.id = t.session_id
+                FROM temae_person_eff tp JOIN temae t ON t.id = tp.temae_id JOIN session s ON s.id = t.session_id
                 WHERE t.my_role = 'teishu'
-                  AND (?1 IS NULL OR s.date >= ?1) AND (?2 IS NULL OR s.date <= ?2) AND (?3 IS NULL OR s.place_id = ?3)
+                  AND (?1 IS NULL OR s.date >= ?1) AND (?2 IS NULL OR s.date <= ?2) AND (?3 IS NULL OR s.place_id = ?3) AND (?4 IS NULL OR s.practice = ?4)
               ) WHERE k IS NOT NULL GROUP BY k ORDER BY 3 DESC",
             other => return Err(crate::Error::Other(format!("unknown dimension {other}"))),
         };
         let conn = self.conn();
         let mut st = conn.prepare(sql)?;
-        let rows = st.query_map(params![f.since, f.until, f.place_id], |r| {
+        let rows = st.query_map(params![f.since, f.until, f.place_id, f.practice.map(|b| b as i64)], |r| {
             Ok(ByRow {
                 key: r.get(0)?,
                 n_sessions: r.get(1)?,
@@ -278,6 +287,45 @@ impl Db {
                 n_other: r.get::<_, Option<i64>>(3)?.unwrap_or(0),
                 first_date: r.get(4)?,
                 last_date: r.get(5)?,
+            })
+        })?;
+        Ok(rows.collect::<rusqlite::Result<_>>()?)
+    }
+}
+
+/// One cell of the events cube: (form, event kind, practice, my role at the event).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct EventRow {
+    pub form: String,
+    pub event_kind: Option<String>,
+    pub practice: bool,
+    pub my_role: Option<String>,
+    pub n: i64,
+    pub first_date: Option<String>,
+    pub last_date: Option<String>,
+}
+
+impl Db {
+    /// Sessions grouped by form × event kind × practice × my role (chaji / chakai statistics).
+    pub fn stats_events(&self, f: &StatsFilter) -> Result<Vec<EventRow>> {
+        let conn = self.conn();
+        let mut st = conn.prepare(
+            "SELECT s.form, s.event_kind, s.practice, s.my_role, COUNT(*), MIN(s.date), MAX(s.date)
+             FROM session s
+             WHERE (?1 IS NULL OR s.date >= ?1) AND (?2 IS NULL OR s.date <= ?2)
+               AND (?3 IS NULL OR s.place_id = ?3) AND (?4 IS NULL OR s.practice = ?4)
+             GROUP BY s.form, s.event_kind, s.practice, s.my_role
+             ORDER BY s.form, s.event_kind, s.practice, s.my_role",
+        )?;
+        let rows = st.query_map(params![f.since, f.until, f.place_id, f.practice.map(|b| b as i64)], |r| {
+            Ok(EventRow {
+                form: r.get(0)?,
+                event_kind: r.get(1)?,
+                practice: r.get::<_, i64>(2)? != 0,
+                my_role: r.get(3)?,
+                n: r.get(4)?,
+                first_date: r.get(5)?,
+                last_date: r.get(6)?,
             })
         })?;
         Ok(rows.collect::<rusqlite::Result<_>>()?)
@@ -362,7 +410,7 @@ mod tests {
         db.vocab_upsert(&crate::model::Vocab { id: "person.t".into(), kind: "person".into(), ja: "T".into(), romaji: None, en: None, parent_id: None, sort: None, origin: "user".into(), archived: false, meta: None }).unwrap();
         db.session_save(&Session {
             date: Some("2026-01-01".into()), place_id: Some("place.a".into()),
-            persons: vec![crate::model::SessionPerson { person_id: Some("person.t".into()), name_free: None, role: "teacher".into() }],
+            persons: vec![crate::model::SessionPerson { person_id: Some("person.t".into()), role: "teacher".into(), ..Default::default() }],
             temae: vec![
                 Temae { temae_id: Some("temae.urasenke.karamono".into()), my_role: Some("teishu".into()), ..Default::default() },
                 Temae { temae_id: Some("temae.urasenke.karamono".into()), my_role: Some("kyaku".into()), host_id: Some("person.t".into()), ..Default::default() },
@@ -379,5 +427,58 @@ mod tests {
         assert_eq!(by[0].key, "person.t");
         assert_eq!(by[0].n_other, 1);
         assert!(db.stats_by("x", &StatsFilter::default()).is_err());
+    }
+
+    /// Temae rows without participants inherit the session roster; the "with" statistic
+    /// and the events cube see it.
+    #[test]
+    fn roster_inheritance_and_events() {
+        let db = Db::open_in_memory().unwrap();
+        db.pack_install(&crate::pack::Pack::from_yaml(crate::pack::URASENKE_YAML).unwrap()).unwrap();
+        for id in ["person.a", "person.b", "person.c"] {
+            db.vocab_upsert(&crate::model::Vocab { id: id.into(), kind: "person".into(), ja: id.into(), romaji: None, en: None, parent_id: None, sort: None, origin: "user".into(), archived: false, meta: None }).unwrap();
+        }
+        let me = db.self_person_id().unwrap();
+        let roster = |roles: &[(&str, &str, Option<i64>)]| -> Vec<crate::model::SessionPerson> {
+            roles.iter().map(|(p, r, seat)| crate::model::SessionPerson { person_id: Some((*p).into()), role: (*r).into(), seat: *seat, ..Default::default() }).collect()
+        };
+        // practice chaji: I host three temae; a and b are the guests for the whole event,
+        // except the last temae where only c sat in.
+        db.session_save(&Session {
+            date: Some("2026-03-01".into()), form: "chaji".into(), event_kind: Some("event.urasenke.shogo".into()),
+            practice: true, my_role: Some("teishu".into()),
+            persons: roster(&[("person.a", "guest", Some(1)), ("person.b", "guest", Some(2)), ("person.c", "mizuya", None)]),
+            temae: vec![
+                Temae { temae_id: Some("temae.urasenke.shozumi".into()), host_id: Some(me.clone()), my_role: Some("teishu".into()), ..Default::default() },
+                Temae { temae_id: Some("temae.urasenke.hiradate.koicha".into()), host_id: Some(me.clone()), my_role: Some("teishu".into()), ..Default::default() },
+                Temae { temae_id: Some("temae.urasenke.hiradate.usucha".into()), host_id: Some(me.clone()), my_role: Some("teishu".into()),
+                        persons: vec![crate::model::TemaePerson { person_id: Some("person.c".into()), role: "kyaku".into(), seat: Some(1), ..Default::default() }],
+                        ..Default::default() },
+            ],
+            ..Default::default()
+        }).unwrap();
+        // a real chaji as main guest
+        db.session_save(&Session {
+            date: Some("2026-04-01".into()), form: "chaji".into(), event_kind: Some("event.urasenke.shogo".into()),
+            practice: false, my_role: Some("shokyaku".into()), my_seat: Some(1),
+            persons: roster(&[("person.a", "host", None)]),
+            temae: vec![Temae { temae_id: Some("temae.urasenke.karamono".into()), host_id: Some("person.a".into()), my_role: Some("shokyaku".into()), ..Default::default() }],
+            ..Default::default()
+        }).unwrap();
+
+        let by = db.stats_by("with", &StatsFilter::default()).unwrap();
+        let n = |k: &str| by.iter().find(|r| r.key == k).map(|r| r.n_host).unwrap_or(0);
+        assert_eq!(n("person.a"), 2, "{by:?}"); // inherited into the first two temae
+        assert_eq!(n("person.b"), 2);
+        assert_eq!(n("person.c"), 3); // mizuya (inherited) twice + own row once
+
+        let ev = db.stats_events(&StatsFilter::default()).unwrap();
+        assert_eq!(ev.len(), 2);
+        let real = ev.iter().find(|r| !r.practice).unwrap();
+        assert_eq!((real.form.as_str(), real.my_role.as_deref(), real.n), ("chaji", Some("shokyaku"), 1));
+        let ev = db.stats_events(&StatsFilter { practice: Some(true), ..Default::default() }).unwrap();
+        assert_eq!(ev.len(), 1);
+        assert_eq!(db.stats_totals(&StatsFilter { practice: Some(false), ..Default::default() }).unwrap().sessions, 1);
+        assert!(!db.stats_cross("event_kind", "session_my_role", false, &StatsFilter::default()).unwrap().is_empty());
     }
 }

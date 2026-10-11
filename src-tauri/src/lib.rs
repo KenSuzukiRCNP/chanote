@@ -8,7 +8,7 @@ use chanote_core::import::{ImportOptions, ImportPreview, ImportReport};
 use chanote_core::record::SessionFilter;
 use chanote_core::stats::{CoverageRow, CrossCell, MonthlyRow, StatsFilter, StatsTotals, CROSS_AXES};
 use chanote_core::ranking::RankRow;
-use chanote_core::stats::ByRow;
+use chanote_core::stats::{ByRow, EventRow};
 use chanote_core::Db;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
@@ -179,6 +179,11 @@ fn stats_cross(
 #[tauri::command]
 fn stats_by(state: State<AppState>, dimension: String, filter: StatsFilter) -> CmdResult<Vec<ByRow>> {
     state.o().db.stats_by(&dimension, &filter).map_err(e)
+}
+
+#[tauri::command]
+fn stats_events(state: State<AppState>, filter: StatsFilter) -> CmdResult<Vec<EventRow>> {
+    state.o().db.stats_events(&filter).map_err(e)
 }
 
 #[tauri::command]
@@ -432,6 +437,7 @@ pub fn run() {
             stats_cross,
             stats_axes,
             stats_by,
+            stats_events,
             vocab_ranking,
             profile_list,
             profile_create,

@@ -1,7 +1,7 @@
 // Mirrors crates/chanote-core/src/model.rs. Keep in sync.
 
 export type VocabKind =
-  | "temae" | "temae-cat" | "place" | "person" | "tana" | "hearth" | "tool" | "school";
+  | "temae" | "temae-cat" | "place" | "person" | "tana" | "hearth" | "tool" | "tool-cat" | "school" | "event-kind";
 
 export interface Vocab {
   id: string;
@@ -33,13 +33,22 @@ export interface ResolvedTemae {
 }
 
 export type DatePrec = "day" | "month" | "year" | "unknown";
-export type SessionKind = "keiko" | "koshukai" | "honban";
-export type MyRole = "teishu" | "hanto" | "mizuya" | "kyaku" | "shokyaku" | "kengaku" | "-";
+/** What happened: ordinary lesson / stand-alone procedures, a chaji, a chakai, a workshop, or unknown. */
+export type SessionForm = "temae" | "chaji" | "chakai" | "koshukai" | "?";
+export const SESSION_FORMS: SessionForm[] = ["temae", "chaji", "chakai", "koshukai", "?"];
+export type MyRole = "teishu" | "hanto" | "mizuya" | "shokyaku" | "kyaku" | "tsume" | "kengaku" | "-";
+export const MY_ROLES: MyRole[] = ["teishu", "shokyaku", "kyaku", "tsume", "hanto", "mizuya", "kengaku", "-"];
+export type SessionRole = "teacher" | "host" | "guest" | "hanto" | "mizuya" | "kengaku";
+/** Roster roles other than teacher (the ones temae rows inherit). */
+export const ROSTER_ROLES: SessionRole[] = ["guest", "host", "hanto", "mizuya", "kengaku"];
 
 export interface SessionPerson {
   person_id: string | null;
   name_free: string | null;
-  role: "teacher" | "guest";
+  role: SessionRole;
+  seat: number | null;
+  is_last: boolean;
+  role_note: string | null;
 }
 
 export interface TemaePerson {
@@ -88,7 +97,14 @@ export interface Session {
   date_prec: DatePrec;
   place_id: string | null;
   place_note: string | null;
-  kind: SessionKind;
+  form: SessionForm;
+  /** vocab id of kind event-kind, "?" or null */
+  event_kind: string | null;
+  /** lesson / rehearsal (true) or the real thing (false) */
+  practice: boolean;
+  /** my role at the event as a whole */
+  my_role: MyRole | null;
+  my_seat: number | null;
   online: boolean;
   note: string | null;
   persons: SessionPerson[];
@@ -100,7 +116,10 @@ export interface SessionSummary {
   date: string | null;
   date_prec: DatePrec;
   place_id: string | null;
-  kind: SessionKind;
+  form: SessionForm;
+  event_kind: string | null;
+  practice: boolean;
+  my_role: MyRole | null;
   online: boolean;
   temae_count: number;
 }
@@ -145,7 +164,8 @@ export function emptyTemae(): Temae {
 export function emptySession(): Session {
   return {
     date: new Date().toISOString().slice(0, 10), date_prec: "day",
-    place_id: null, place_note: null, kind: "keiko", online: false, note: null,
+    place_id: null, place_note: null, form: "temae", event_kind: null, practice: true,
+    my_role: null, my_seat: null, online: false, note: null,
     persons: [], temae: [],
   };
 }
@@ -168,6 +188,17 @@ export interface StatsFilter {
   until?: string | null;
   recent_days?: number | null;
   place_id?: string | null;
+  practice?: boolean | null;
+}
+
+export interface EventRow {
+  form: SessionForm;
+  event_kind: string | null;
+  practice: boolean;
+  my_role: MyRole | null;
+  n: number;
+  first_date: string | null;
+  last_date: string | null;
 }
 
 export interface StatsTotals {
@@ -223,6 +254,9 @@ export interface SessionFilter {
   tools?: string[];
   my_role?: string | null;
   text?: string | null;
+  form?: SessionForm | null;
+  event_kind?: string | null;
+  practice?: boolean | null;
 }
 
 export interface ImportOptions {
@@ -232,7 +266,7 @@ export interface ImportOptions {
 }
 export interface PreviewPerson { id: string; name: string; is_self: boolean; n: number }
 export interface PreviewRow {
-  index: number; date: string | null; date_prec: string; place: string; kind: string;
+  index: number; date: string | null; date_prec: string; place: string; form: string; practice: boolean;
   summary: string; n_temae: number; duplicate_of: number | null;
 }
 export interface ImportPreview { persons: PreviewPerson[]; rows: PreviewRow[]; vocab_new: number; schema_version: number }

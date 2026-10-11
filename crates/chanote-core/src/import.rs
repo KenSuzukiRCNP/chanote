@@ -17,7 +17,25 @@ pub struct ImportReport {
 
 /// Bring an older export up to the current schema in memory.
 /// schema 1 → 2: pack ids become pack-scoped (see migrate.rs).
-pub fn upgrade_doc(mut doc: ExportDoc) -> ExportDoc {
+/// schema 2 → 3: `kind` becomes form + practice (same mapping as migration 004).
+pub fn upgrade_doc(doc: ExportDoc) -> ExportDoc {
+    let mut doc = upgrade_doc_v2(doc);
+    if doc.schema_version >= 3 {
+        return doc;
+    }
+    for s in doc.sessions.iter_mut() {
+        match s.kind.as_deref() {
+            Some("koshukai") => { s.form = "koshukai".into(); s.practice = true; }
+            Some("honban") => { s.form = "?".into(); s.practice = false; }
+            _ => { s.form = "temae".into(); s.practice = true; }
+        }
+        s.kind = None;
+    }
+    doc.schema_version = 3;
+    doc
+}
+
+fn upgrade_doc_v2(mut doc: ExportDoc) -> ExportDoc {
     if doc.schema_version >= 2 {
         return doc;
     }
@@ -104,7 +122,8 @@ pub struct PreviewRow {
     pub date: Option<String>,
     pub date_prec: String,
     pub place: String,
-    pub kind: String,
+    pub form: String,
+    pub practice: bool,
     /// "真之行台子 / 濃茶付花月" — temae names in the file's own vocabulary
     pub summary: String,
     pub n_temae: usize,
@@ -293,7 +312,8 @@ impl Db {
                 date: s.date.clone(),
                 date_prec: s.date_prec.clone(),
                 place: name(&s.place_id),
-                kind: s.kind.clone(),
+                form: s.form.clone(),
+                practice: s.practice,
                 summary: s
                     .temae
                     .iter()
@@ -489,6 +509,27 @@ mod tests {
         assert!(full.temae[0].temae_id.as_deref().unwrap().starts_with("temae.urasenke."));
     }
 
+    /// A v0.3 export (schema 2): `kind` is mapped to form / practice.
+    #[test]
+    fn schema2_export_upgrades_on_import() {
+        const OLD: &str = include_str!("../testdata/sample-v2.json");
+        let db = Db::open_in_memory().unwrap();
+        db.pack_install(&Pack::from_yaml(URASENKE_YAML).unwrap()).unwrap();
+        db.self_person_id().unwrap();
+        let rep = db.import_json(OLD).unwrap();
+        assert!(rep.sessions_added > 100);
+        let f = crate::record::SessionFilter { form: Some("koshukai".into()), ..Default::default() };
+        assert!(!db.session_search(&f, 10, 0).unwrap().is_empty());
+        // the one 本番 became form '?' / practice = false
+        let f = crate::record::SessionFilter { practice: Some(false), ..Default::default() };
+        let real = db.session_search(&f, 10, 0).unwrap();
+        assert_eq!(real.len(), 1);
+        assert_eq!(real[0].form, "?");
+        let pv = db.import_preview(OLD, &ImportOptions::default()).unwrap();
+        assert_eq!(pv.schema_version, 3);
+        assert!(pv.rows.iter().all(|r| r.duplicate_of.is_some()));
+    }
+
     /// The bundled sample data must import into a fresh app (pack already installed)
     /// and be usable by every statistics query.
     #[test]
@@ -508,6 +549,10 @@ mod tests {
             assert!(!db.stats_by(d, &f).unwrap().is_empty(), "{d}");
         }
         assert!(!db.vocab_ranking("person").unwrap().is_empty());
+        assert!(!db.stats_events(&f).unwrap().is_empty());
+        // the sample has real chaji / chakai and practice chaji with a roster
+        assert!(!db.session_search(&crate::record::SessionFilter { form: Some("chaji".into()), practice: Some(true), ..Default::default() }, 10, 0).unwrap().is_empty());
+        assert!(!db.session_search(&crate::record::SessionFilter { form: Some("chakai".into()), practice: Some(false), ..Default::default() }, 10, 0).unwrap().is_empty());
         // importing again is a no-op
         let rep2 = db.import_json(SAMPLE).unwrap();
         assert_eq!(rep2.sessions_added, 0);

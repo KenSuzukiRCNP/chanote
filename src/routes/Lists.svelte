@@ -9,11 +9,12 @@
   import type { Vocab, AxisValues } from "$lib/types";
   import TemaeListEditor from "./TemaeListEditor.svelte";
 
-  const kinds = ["place", "person", "tana", "tool", "temae"];
+  const kinds = ["place", "person", "tana", "tool", "event-kind", "temae"];
   let kind = $state("place");
   let showArchived = $state(false);
   let editing = $state<string | null>(null);
-  let draft = $state<{ ja: string; romaji: string; en: string; parent_id: string | null; teacher: boolean; note: string; paired_with: string | null }>({ ja: "", romaji: "", en: "", parent_id: null, teacher: false, note: "", paired_with: null });
+  let draft = $state<{ ja: string; romaji: string; en: string; parent_id: string | null; teacher: boolean; note: string; paired_with: string | null; form: string }>({ ja: "", romaji: "", en: "", parent_id: null, teacher: false, note: "", paired_with: null, form: "chaji" });
+  function formOf(v: Vocab): string { return (v.meta as { form?: string } | null)?.form ?? "chaji"; }
 
   // new plain row
   let newJa = $state("");
@@ -21,6 +22,7 @@
   let newTeacher = $state(false);
   let newParent = $state<string | null>(null);
   let newNote = $state("");
+  let newForm = $state<"chaji" | "chakai">("chaji");
 
   // new alias (temae tab)
   let aliasJa = $state("");
@@ -58,11 +60,12 @@
     const ja = newJa.trim() || newRomaji.trim();
     if (!ja) return;
     const v: Vocab = {
-      id: `${kind}.${slug(newRomaji || newJa)}-${Date.now().toString(36)}`,
+      id: `${kind === "event-kind" ? "event" : kind}.${slug(newRomaji || newJa)}-${Date.now().toString(36)}`,
       kind, ja, romaji: newRomaji.trim() || null, en: null,
       parent_id: newParent, sort: (vocab.byKind[kind]?.length ?? 0) + 1, origin: "user", archived: false,
       meta: kind === "person" && newTeacher ? { teacher: true }
-          : kind === "tool" && newNote.trim() ? { note: newNote.trim() } : null,
+          : kind === "tool" && newNote.trim() ? { note: newNote.trim() }
+          : kind === "event-kind" ? { form: newForm } : null,
     };
     await api.vocabUpsert(v);
     newJa = ""; newRomaji = ""; newTeacher = false; newNote = "";
@@ -94,11 +97,12 @@
 
   function startEdit(v: Vocab) {
     editing = v.id;
-    draft = { ja: v.ja, romaji: v.romaji ?? "", en: v.en ?? "", parent_id: v.parent_id ?? null, teacher: isTeacher(v), note: noteOf(v), paired_with: pairOf(v) };
+    draft = { ja: v.ja, romaji: v.romaji ?? "", en: v.en ?? "", parent_id: v.parent_id ?? null, teacher: isTeacher(v), note: noteOf(v), paired_with: pairOf(v), form: formOf(v) };
   }
   async function commitEdit(v: Vocab) {
     const meta = { ...((v.meta as Record<string, unknown> | null) ?? {}) };
     if (kind === "person") { if (draft.teacher) meta.teacher = true; else delete meta.teacher; }
+    if (kind === "event-kind") meta.form = draft.form;
     if (kind === "tool") {
       if (draft.note.trim()) meta.note = draft.note.trim(); else delete meta.note;
       if (draft.paired_with && draft.paired_with !== v.id) meta.paired_with = draft.paired_with; else delete meta.paired_with;
@@ -187,6 +191,13 @@
     {#if kind === "tool"}
       <label class="grow"><div class="label">{t("lists.note")}</div><input class="field" bind:value={newNote} placeholder={t("lists.notePlaceholder")} onkeydown={(e) => e.key === "Enter" && add()} /></label>
     {/if}
+    {#if kind === "event-kind"}
+      <label><div class="label">{t("lists.eventForm")}</div>
+        <select class="field w-auto" bind:value={newForm}>
+          <option value="chaji">{t("session.form.chaji")}</option>
+          <option value="chakai">{t("session.form.chakai")}</option>
+        </select></label>
+    {/if}
     <button class="btn btn-primary" onclick={add}>＋</button>
   </div>
 {/if}
@@ -212,6 +223,12 @@
                   {#each parentsFor.filter((p) => p.id !== v.id) as p}<option value={p.id}>{term(p)}</option>{/each}
                 </select>
               {/if}
+              {#if kind === "event-kind"}
+                <select class="field w-auto" bind:value={draft.form}>
+                  <option value="chaji">{t("session.form.chaji")}</option>
+                  <option value="chakai">{t("session.form.chakai")}</option>
+                </select>
+              {/if}
               {#if kind === "tool"}
                 <input class="field w-72" bind:value={draft.note} placeholder={t("lists.notePlaceholder")} />
                 <label class="text-xs flex items-center gap-1">{t("lists.pairedWith")}
@@ -233,6 +250,7 @@
               {#if noteOf(v)}<div class="text-[11px] text-stone-400 whitespace-pre-wrap">{noteOf(v)}</div>{/if}
             {/if}
             {#if kind === "person" && isTeacher(v)}<span class="ml-1 text-[10px] rounded px-1 bg-matcha/15 text-matcha-deep">{t("session.teacher")}</span>{/if}
+            {#if kind === "event-kind"}<span class="ml-1 text-[10px] rounded px-1 bg-stone-100 text-stone-500">{t("session.form." + formOf(v))}</span>{/if}
             {#if kind === "temae" && aliasTarget(v)}
               <div class="text-[11px] text-stone-400">= {term(vocab.byId[aliasTarget(v)!])} / {modsSummary(aliasModsOf(v))}</div>
             {/if}

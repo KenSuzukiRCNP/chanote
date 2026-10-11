@@ -139,13 +139,20 @@ mod tests {
                   ('person.self', 'person', '自分', 'user', '{"is_self":true}');
                 UPDATE vocab SET parent_id = 'temae-cat.kagetsu' WHERE id IN ('temae.kagetsu','temae.kagetsu.koicha');
                 UPDATE vocab SET parent_id = 'tana.daisu' WHERE id = 'tana.daisu.shin';
-                INSERT INTO session (id, date) VALUES (1, '2026-01-01');
+                INSERT INTO session (id, date, kind) VALUES (1, '2026-01-01', 'honban'), (2, '2026-01-02', 'keiko');
+                INSERT INTO session_person (session_id, person_id, role) VALUES (2, 'person.self', 'teacher');
                 INSERT INTO temae (session_id, ord, temae_id, temae_alias_id, tana_id, host_id, my_role)
                   VALUES (1, 0, 'temae.kagetsu', 'temae.kagetsu.koicha', 'tana.daisu.shin', 'person.self', 'teishu');
             "#).unwrap();
         }
         let db = crate::Db::open(&path).unwrap();
-        assert_eq!(db.schema_version().unwrap(), 3);
+        assert_eq!(db.schema_version().unwrap(), 4);
+        // 004: kind → form / practice
+        let s1 = db.session_get(1).unwrap().unwrap();
+        assert_eq!((s1.form.as_str(), s1.practice), ("?", false));
+        let s2 = db.session_get(2).unwrap().unwrap();
+        assert_eq!((s2.form.as_str(), s2.practice), ("temae", true));
+        assert_eq!(s2.persons[0].role, "teacher");
         assert!(db.vocab_get("temae.kagetsu").unwrap().is_none());
         let k = db.vocab_get("temae.urasenke.kagetsu").unwrap().unwrap();
         assert_eq!(k.parent_id.as_deref(), Some("temae-cat.urasenke.kagetsu"));

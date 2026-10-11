@@ -2,7 +2,7 @@
 import { api } from "./api";
 import type { Vocab } from "./types";
 
-const KINDS = ["temae", "temae-cat", "place", "person", "tana", "hearth", "tool-cat", "tool", "school"] as const;
+const KINDS = ["temae", "temae-cat", "place", "person", "tana", "hearth", "tool-cat", "tool", "school", "event-kind"] as const;
 const RANKED = ["person", "place", "tana", "tool"] as const;
 
 export const vocab = $state({
@@ -108,4 +108,9 @@ export function packName(v: Vocab): string | null {
   if (!v.origin.startsWith("pack:")) return null;
   const school = vocab.byId["school." + v.origin.slice(5)];
   return school ? school.ja : v.origin.slice(5);
+}
+
+/** Event kinds (正午の茶事, 初釜 …) for a form, pack order. */
+export function eventKinds(form: string): Vocab[] {
+  return active("event-kind").filter((v) => (v.meta as { form?: string } | null)?.form === form);
 }

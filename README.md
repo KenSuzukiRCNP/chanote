@@ -21,6 +21,12 @@ guest, assistant, or just watching). Add as much or as little as you remember: h
 shelf, thick or thin tea, orientation, room, seating order, utensils, a note, photos.
 A date can be "sometime in March 2019"; a shelf can be "there was one, I forget which".
 
+**Chaji and chakai, not just lessons.** A record is an *event*: an ordinary lesson, a chaji
+(with its kind — 正午, 夜咄, 朝茶事 …), a chakai (初釜, 月釜 …) or a workshop, and a tick says whether
+it was practice or the real thing. Write the guest list, assistant and host once for the whole
+event; every temae in it inherits them unless you change one. Then ask: how many chaji have I
+done, how often was I main guest, last guest, assistant or in the back room?
+
 **Your own names for things.** "Nagaita koicha" or "usucha with the travel chest" — register
 the names you actually use and chanote records them as the underlying procedure plus its
 settings, so statistics still add up.
@@ -36,6 +42,7 @@ notes — and switch on the notes to re-read your teacher's remarks before the n
 - *Timeline* — monthly practice by ro / furo season.
 - *Cross tables* — temae × shelf, temae × hearth, place × teacher, anything × anything.
 - *People and places* — by teacher, by place, whose temae you watched, who sat with you.
+- *Events* — chaji and chakai by kind, practice vs. real, and your role at each.
 
 <p align="center">
   <img src="docs/screenshots/home-filter.png" width="49%" alt="Filtering records">

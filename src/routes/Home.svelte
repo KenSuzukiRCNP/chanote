@@ -5,7 +5,7 @@
   import { get, ranked, teachers, temaeUnderCategory, toolGroups, vocab } from "$lib/vocab.svelte";
   import { homeFilter, homeFilterActive, resetHomeFilter, toSessionFilter } from "$lib/homeFilter.svelte";
   import { fmtDate } from "$lib/format";
-  import type { SessionSummary, Session } from "$lib/types";
+  import { SESSION_FORMS, type SessionSummary, type Session } from "$lib/types";
   import TemaeLine from "./TemaeLine.svelte";
   import TemaePicker from "./TemaePicker.svelte";
 
@@ -46,6 +46,7 @@
   $effect(() => {
     void homeFilter.temaeSel; void homeFilter.myRoleOnly; void homeFilter.place_id; void homeFilter.teacher_id;
     void homeFilter.since; void homeFilter.until; void homeFilter.persons.length; void homeFilter.tools.length; void homeFilter.text;
+    void homeFilter.form; void homeFilter.practice;
     void load();
   });
   // filtering by temae is usually done to re-read the notes: switch them on
@@ -63,6 +64,16 @@
   function addTool() {
     if (toolPick && !homeFilter.tools.includes(toolPick)) homeFilter.tools.push(toolPick);
     toolPick = "";
+  }
+  /** roster line: "亭主 佐藤さん・正客 Anna・田中さん・詰 Marco・半東 鈴木さん" (teachers excluded) */
+  function rosterLine(s: Session): string {
+    const parts = s.persons.filter((p) => p.role !== "teacher").map((p) => {
+      const n = term(get(p.person_id)) || p.name_free || "—";
+      const r = p.role === "host" ? t("role.host") : p.role === "guest" ? (p.seat === 1 ? t("role.shokyaku") : p.is_last ? t("role.tsume") : "") : t("role." + p.role);
+      return r ? `${r} ${n}` : n;
+    });
+    if (s.my_role && s.my_role !== "-") parts.unshift(`${t("role." + s.my_role)} ${t("temae.myRole")}`);
+    return parts.join("・");
   }
   /** temae rows shown for a session: all, or only those matching the temae filter */
   function visibleTemae(s: Session) {
@@ -93,6 +104,17 @@
       <span></span>
     </div>
     <div class="grid grid-cols-[auto_1fr_auto_1fr] gap-2 items-center">
+      <span class="label mb-0">{t("session.form")}</span>
+      <select class="field" bind:value={homeFilter.form}>
+        <option value="">{t("home.formAny")}</option>
+        {#each SESSION_FORMS as f}<option value={f}>{t("session.form." + f)}</option>{/each}
+      </select>
+      <span class="label mb-0">{t("session.practice")}</span>
+      <select class="field" bind:value={homeFilter.practice}>
+        <option value="">{t("home.practiceAny")}</option>
+        <option value="1">{t("stats.practiceFilter.practice")}</option>
+        <option value="0">{t("stats.practiceFilter.real")}</option>
+      </select>
       <span class="label mb-0">{t("session.place")}</span>
       <select class="field" bind:value={homeFilter.place_id}>
         <option value={null}>—</option>
@@ -156,8 +178,11 @@
         {#if r.online}
           <span class="text-xs rounded px-1.5 py-0.5 bg-sky-100 text-sky-700">{t("session.online")}</span>
         {/if}
-        {#if r.kind !== "keiko"}
-          <span class="text-xs rounded px-1.5 py-0.5 bg-clay/15 text-clay">{t("session.kind." + r.kind)}</span>
+        {#if r.form !== "temae"}
+          <span class="text-xs rounded px-1.5 py-0.5 bg-clay/15 text-clay">{r.event_kind && r.event_kind !== "?" ? term(get(r.event_kind)) : t("session.form." + r.form)}</span>
+        {/if}
+        {#if !r.practice}
+          <span class="text-xs rounded px-1.5 py-0.5 bg-matcha/15 text-matcha-deep">{t("session.real")}</span>
         {/if}
         <span class="grow"></span>
         {#if photos[r.id]}<span class="text-xs text-stone-400" title={t("photo.title")}>▣ {photos[r.id]}</span>{/if}
@@ -168,6 +193,9 @@
           {@const s = detail[r.id]}
           {@const shown = visibleTemae(s)}
           <ul class="mt-2 pl-4 text-sm flex flex-col gap-0.5 grow">
+            {#if s.persons.some((p) => p.role !== "teacher") || (s.my_role && s.form !== "temae")}
+              <li class="text-xs text-stone-500 list-none -ml-4 mb-0.5">{rosterLine(s)}</li>
+            {/if}
             {#each shown as tm}
               <li>
                 <TemaeLine temae={tm} />

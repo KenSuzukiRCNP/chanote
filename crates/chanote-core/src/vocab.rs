@@ -72,7 +72,7 @@ impl Db {
         let conn = self.conn();
         let n: i64 = conn.query_row(
             "SELECT
-               (SELECT COUNT(*) FROM session WHERE place_id = ?1)
+               (SELECT COUNT(*) FROM session WHERE place_id = ?1 OR event_kind = ?1)
              + (SELECT COUNT(*) FROM session_person WHERE person_id = ?1)
              + (SELECT COUNT(*) FROM temae WHERE temae_id = ?1 OR temae_alias_id = ?1 OR host_id = ?1
                                             OR teacher_id = ?1 OR tana_id = ?1)

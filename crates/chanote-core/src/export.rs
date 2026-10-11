@@ -5,8 +5,9 @@ use crate::{Db, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-/// 1: v0.1–0.2 (unscoped pack ids). 2: v0.3+ (pack-scoped ids `temae.<pack>.<id>`).
-pub const SCHEMA_VERSION: u32 = 2;
+/// 1: v0.1–0.2 (unscoped pack ids). 2: v0.3 (pack-scoped ids `temae.<pack>.<id>`).
+/// 3: v0.4+ (session form / practice / event kind / my role / roster instead of `kind`).
+pub const SCHEMA_VERSION: u32 = 3;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ExportDoc {
@@ -36,7 +37,7 @@ impl Db {
 
     fn all_vocab(&self) -> Result<Vec<Vocab>> {
         let mut out = Vec::new();
-        for kind in ["school", "temae-cat", "temae", "place", "person", "tana", "hearth", "tool-cat", "tool"] {
+        for kind in ["school", "temae-cat", "temae", "place", "person", "tana", "hearth", "tool-cat", "tool", "event-kind"] {
             out.extend(self.vocab_list(kind, true)?);
         }
         Ok(out)
@@ -66,11 +67,12 @@ impl Db {
 
         let mut w = String::new();
         let header = [
-            "session_id", "date", "date_prec", "place", "session_kind", "online", "teachers",
+            "session_id", "date", "date_prec", "place", "form", "event_kind", "practice", "session_my_role",
+            "online", "teachers", "roster",
             "ord", "time", "temae", "temae_alias", "temae_free", "host", "my_role", "my_role_note",
             "my_seat", "hearth", "katte", "room", "tea", "tana", "tana_free", "kinin", "tsukimono",
             "teacher", "participants", "tools", "note",
-            "temae_id", "temae_alias_id", "host_id", "tana_id", "place_id", "teacher_id",
+            "temae_id", "temae_alias_id", "host_id", "tana_id", "place_id", "teacher_id", "event_kind_id",
         ];
         push_row(&mut w, header.iter().map(|s| s.to_string()));
 
@@ -83,19 +85,35 @@ impl Db {
                 .map(|p| p.name_free.clone().unwrap_or_else(|| name(&p.person_id)))
                 .collect::<Vec<_>>()
                 .join("; ");
+            let fmt_person = |n: String, role: &str, seat: Option<i64>| -> String {
+                let r = match role { "guest" | "kyaku" => String::new(), other => format!("({other})") };
+                match seat {
+                    Some(seat) => format!("{n}{r}@{seat}"),
+                    None => format!("{n}{r}"),
+                }
+            };
+            // roster minus teachers: what temae rows without their own participants inherit
+            let roster_rows: Vec<&crate::model::SessionPerson> = s.persons.iter().filter(|p| p.role != "teacher").collect();
+            let roster = roster_rows
+                .iter()
+                .map(|p| fmt_person(p.name_free.clone().unwrap_or_else(|| name(&p.person_id)), &p.role, p.seat))
+                .collect::<Vec<_>>()
+                .join("; ");
             for (i, t) in s.temae.iter().enumerate() {
-                let participants = t
-                    .persons
-                    .iter()
-                    .map(|p| {
-                        let n = p.name_free.clone().unwrap_or_else(|| name(&p.person_id));
-                        match p.seat {
-                            Some(seat) => format!("{n}@{seat}"),
-                            None => n,
-                        }
-                    })
-                    .collect::<Vec<_>>()
-                    .join("; ");
+                let participants = if t.persons.is_empty() {
+                    roster_rows
+                        .iter()
+                        .filter(|p| p.role != "host")
+                        .map(|p| fmt_person(p.name_free.clone().unwrap_or_else(|| name(&p.person_id)), &p.role, p.seat))
+                        .collect::<Vec<_>>()
+                        .join("; ")
+                } else {
+                    t.persons
+                        .iter()
+                        .map(|p| fmt_person(p.name_free.clone().unwrap_or_else(|| name(&p.person_id)), &p.role, p.seat))
+                        .collect::<Vec<_>>()
+                        .join("; ")
+                };
                 let tools = t
                     .tools
                     .iter()
@@ -108,9 +126,16 @@ impl Db {
                     s.date.clone().unwrap_or_default(),
                     s.date_prec.clone(),
                     name(&s.place_id),
-                    s.kind.clone(),
+                    s.form.clone(),
+                    match s.event_kind.as_deref() {
+                        Some("?") => "?".into(),
+                        _ => name(&s.event_kind),
+                    },
+                    if s.practice { "1".into() } else { "0".into() },
+                    s.my_role.clone().unwrap_or_default(),
                     if s.online { "1".into() } else { "0".into() },
                     teachers.clone(),
+                    roster.clone(),
                     (i + 1).to_string(),
                     t.time.clone().unwrap_or_default(),
                     name(&t.temae_id),
@@ -142,6 +167,7 @@ impl Db {
                     t.tana_id.clone().unwrap_or_default(),
                     s.place_id.clone().unwrap_or_default(),
                     t.teacher_id.clone().unwrap_or_default(),
+                    s.event_kind.clone().unwrap_or_default(),
                 ];
                 push_row(&mut w, row.into_iter());
             }
@@ -192,10 +218,23 @@ mod tests {
             romaji: None, en: None, parent_id: None, sort: None, origin: "user".into(),
             archived: false, meta: None,
         }).unwrap();
+        db.vocab_upsert(&Vocab {
+            id: "person.g".into(), kind: "person".into(), ja: "佐藤さん".into(),
+            romaji: None, en: None, parent_id: None, sort: None, origin: "user".into(),
+            archived: false, meta: None,
+        }).unwrap();
         db.session_save(&Session {
             date: Some("2026-05-10".into()),
             place_id: Some("place.shofu-an".into()),
             online: true,
+            form: "chaji".into(),
+            event_kind: Some("event.urasenke.shogo".into()),
+            practice: false,
+            my_role: Some("teishu".into()),
+            persons: vec![
+                crate::model::SessionPerson { person_id: Some("person.g".into()), role: "guest".into(), seat: Some(1), ..Default::default() },
+                crate::model::SessionPerson { person_id: None, name_free: Some("Lee".into()), role: "hanto".into(), ..Default::default() },
+            ],
             note: Some("memo, with \"quotes\"".into()),
             temae: vec![Temae {
                 temae_id: Some("temae.urasenke.kagetsu".into()),
@@ -223,7 +262,9 @@ mod tests {
         let csv = db.export_csv().unwrap();
         let lines: Vec<&str> = csv.split("\r\n").collect();
         assert!(lines[0].starts_with("session_id,date,"));
-        assert!(lines[1].contains("松風庵"));
+        assert!(lines[1].contains("松風庵,chaji,正午の茶事,0,teishu,1,"), "{}", lines[1]);
+        // temae without its own participants inherits the roster (host excluded, teacher excluded)
+        assert!(lines[1].contains("佐藤さん@1; Lee(hanto)"), "{}", lines[1]);
         assert!(lines[1].contains("花月之式,濃茶付花月"));
         assert!(lines[1].contains("自分,teishu,月"));
         assert!(lines[1].contains("\"line1\nline2\""));

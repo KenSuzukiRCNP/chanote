@@ -2,18 +2,20 @@
   import { onMount } from "svelte";
   import { api } from "$lib/api";
   import { t, term } from "$lib/i18n.svelte";
-  import { active, get } from "$lib/vocab.svelte";
+  import { active, get, vocab } from "$lib/vocab.svelte";
   import { buildCoverage, buildStale, daysSince, seasonOf, type CategoryBlock, type HearthGroup } from "$lib/stats";
-  import type { ByRow, CoverageRow, CrossCell, MonthlyRow, StatsTotals } from "$lib/types";
+  import { MY_ROLES, type ByRow, type CoverageRow, type CrossCell, type EventRow, type MonthlyRow, type StatsTotals } from "$lib/types";
   import Timeline from "./Timeline.svelte";
   import CrossTable from "./CrossTable.svelte";
 
-  const tabs = ["coverage", "interval", "timeline", "cross", "people"] as const;
+  const tabs = ["coverage", "interval", "timeline", "cross", "people", "events"] as const;
   let tab = $state<(typeof tabs)[number]>("coverage");
 
   // filters
   let period = $state<"all" | "1y" | "3y">("all");
   let placeId = $state<string | null>(null);
+  let practiceSel = $state<"all" | "practice" | "real">("all");
+  const practice = $derived(practiceSel === "all" ? null : practiceSel === "practice");
   let split = $state(false);          // split by ro / furo
   let seasonOnly = $state(true);      // interval tab
   let showUnseen = $state(true);      // coverage tab
@@ -36,15 +38,39 @@
   let dim = $state<(typeof dims)[number]>("teacher");
   let by = $state<ByRow[]>([]);
   async function loadBy() {
-    by = await api.statsBy(dim, { since, place_id: placeId });
+    by = await api.statsBy(dim, { since, place_id: placeId, practice });
   }
-  $effect(() => { void since; void placeId; void dim; void loadBy(); });
+  $effect(() => { void since; void placeId; void dim; void practice; void loadBy(); });
+  // events tab
+  let events = $state<EventRow[]>([]);
+  async function loadEvents() { events = await api.statsEvents({ since, place_id: placeId, practice }); }
+  $effect(() => { void since; void placeId; void practice; void loadEvents(); });
+  const forms = ["chaji", "chakai", "koshukai", "temae", "?"] as const;
+  const sum = (rows: EventRow[]) => rows.reduce((a, r) => a + r.n, 0);
+  const last = (rows: EventRow[]) => rows.map((r) => r.last_date).filter(Boolean).sort().at(-1) ?? "";
+  const byForm = $derived(forms.map((f) => {
+    const rows = events.filter((r) => r.form === f);
+    return { form: f, practice: sum(rows.filter((r) => r.practice)), real: sum(rows.filter((r) => !r.practice)), last: last(rows) };
+  }).filter((x) => x.practice || x.real));
+  const byKind = $derived.by(() => {
+    const keys = [...new Set(events.filter((r) => r.form === "chaji" || r.form === "chakai").map((r) => `${r.form}|${r.event_kind ?? ""}`))];
+    return keys.map((k) => {
+      const [form, kind] = k.split("|");
+      const rows = events.filter((r) => r.form === form && (r.event_kind ?? "") === kind);
+      return { form, kind, practice: sum(rows.filter((r) => r.practice)), real: sum(rows.filter((r) => !r.practice)), last: last(rows),
+               order: kind ? (vocab.byKind["event-kind"] ?? []).findIndex((v) => v.id === kind) : 1e6 };
+    }).sort((a, b) => a.form.localeCompare(b.form) || a.order - b.order);
+  });
+  const byRole = $derived(MY_ROLES.map((role) => {
+    const rows = events.filter((r) => r.my_role === role && r.form !== "temae");
+    return { role, practice: sum(rows.filter((r) => r.practice)), real: sum(rows.filter((r) => !r.practice)), last: last(rows) };
+  }).filter((x) => x.practice || x.real));
   function keyLabel(k: string): string {
     if (k.startsWith("free:")) return k.slice(5);
     return term(get(k)) || k;
   }
 
-  const axes = ["temae", "alias", "hearth_group", "hearth", "tana", "tea", "katte", "room", "kinin", "host", "teacher", "place", "my_role", "year", "session_kind"];
+  const axes = ["temae", "alias", "hearth_group", "hearth", "tana", "tea", "katte", "room", "kinin", "host", "teacher", "place", "my_role", "year", "form", "event_kind", "practice", "session_my_role"];
 
   const since = $derived.by(() => {
     if (period === "all") return null;
@@ -55,20 +81,20 @@
 
   async function load() {
     loading = true;
-    const filter = { since, place_id: placeId };
+    const filter = { since, place_id: placeId, practice };
     const [r, tt, m, list] = await Promise.all([api.statsCoverage(filter), api.statsTotals(filter), api.statsMonthly(filter), api.sessionList(100000, 0)]);
     rows = r; totals = tt; monthly = m;
     sessionDates = list
-      .filter((x) => x.date && (!since || x.date >= since) && (!placeId || x.place_id === placeId))
+      .filter((x) => x.date && (!since || x.date >= since) && (!placeId || x.place_id === placeId) && (practice == null || x.practice === practice))
       .map((x) => x.date as string);
     loading = false;
   }
   async function loadCross() {
-    cross = await api.statsCross(rowAxis, colAxis, crossHostOnly, { since, place_id: placeId });
+    cross = await api.statsCross(rowAxis, colAxis, crossHostOnly, { since, place_id: placeId, practice });
   }
   onMount(load);
-  $effect(() => { void since; void placeId; void load(); });
-  $effect(() => { void since; void placeId; void rowAxis; void colAxis; void crossHostOnly; void loadCross(); });
+  $effect(() => { void since; void placeId; void practice; void load(); });
+  $effect(() => { void since; void placeId; void practice; void rowAxis; void colAxis; void crossHostOnly; void loadCross(); });
 
   const blocks: CategoryBlock[] = $derived(buildCoverage(rows, active("temae"), active("temae-cat")));
   const stale = $derived(buildStale(blocks, seasonOnly));
@@ -121,6 +147,9 @@
   <select class="field w-auto" bind:value={placeId}>
     <option value={null}>{t("stats.allPlaces")}</option>
     {#each active("place") as p}<option value={p.id}>{term(p)}</option>{/each}
+  </select>
+  <select class="field w-auto" bind:value={practiceSel}>
+    {#each ["all", "practice", "real"] as x}<option value={x}>{t("stats.practiceFilter." + x)}</option>{/each}
   </select>
 </div>
 
@@ -296,5 +325,41 @@
         {/each}
       </tbody>
     </table>
+  {/if}
+
+{:else if tab === "events"}
+  <p class="text-xs text-stone-400 mb-2">{t("stats.eventsHelp")}</p>
+  {#if events.length === 0}
+    <p class="text-stone-500">{t("stats.noData")}</p>
+  {:else}
+    {#snippet evTable(title: string, rows: { label: string; practice: number; real: number; last: string }[])}
+      <table class="text-sm max-w-xl w-full mb-6">
+        <thead class="text-xs text-stone-500"><tr class="border-b border-line">
+          <th class="text-left py-1 font-normal">{title}</th>
+          <th class="text-right py-1 px-2 font-normal">{t("stats.practiceCol")}</th>
+          <th class="text-right py-1 px-2 font-normal">{t("stats.realCol")}</th>
+          <th class="text-right py-1 px-2 font-normal">{t("stats.total")}</th>
+          <th class="text-right py-1 px-2 font-normal">{t("stats.last")}</th>
+        </tr></thead>
+        <tbody>
+          {#each rows as r (r.label)}
+            <tr class="border-b border-line/60">
+              <td class="py-1">{r.label}</td>
+              <td class="text-right px-2 tabular-nums">{r.practice || ""}</td>
+              <td class="text-right px-2 tabular-nums font-medium">{r.real || ""}</td>
+              <td class="text-right px-2 tabular-nums text-stone-500">{r.practice + r.real}</td>
+              <td class="text-right px-2 tabular-nums text-stone-500">{r.last}</td>
+            </tr>
+          {/each}
+        </tbody>
+      </table>
+    {/snippet}
+    {@render evTable(t("stats.byForm"), byForm.map((x) => ({ label: t("session.form." + x.form), practice: x.practice, real: x.real, last: x.last })))}
+    {#if byKind.length}
+      {@render evTable(t("stats.byKind"), byKind.map((x) => ({ label: `${t("session.form." + x.form)} › ${x.kind ? (x.kind === "?" ? t("value.unknown") : term(get(x.kind)) || x.kind) : t("value.unset")}`, practice: x.practice, real: x.real, last: x.last })))}
+    {/if}
+    {#if byRole.length}
+      {@render evTable(t("stats.myRoleAtEvents"), byRole.map((x) => ({ label: t("role." + x.role), practice: x.practice, real: x.real, last: x.last })))}
+    {/if}
   {/if}
 {/if}

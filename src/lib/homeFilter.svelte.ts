@@ -1,6 +1,6 @@
 // Filter state for the records list. Module-level so it survives navigating to the
 // editor and back within a session.
-import type { SessionFilter } from "./types";
+import type { SessionFilter, SessionForm } from "./types";
 
 export const homeFilter = $state({
   /** "temae:<id>" | "cat:<id>" | "" */
@@ -13,19 +13,22 @@ export const homeFilter = $state({
   persons: [] as string[],
   tools: [] as string[],
   text: "",
+  form: "" as "" | SessionForm,
+  /** "" any | "1" lessons | "0" real */
+  practice: "" as "" | "1" | "0",
   showNotes: false,
 });
 
 export function resetHomeFilter() {
   Object.assign(homeFilter, {
     temaeSel: "", myRoleOnly: false, place_id: null, teacher_id: null, since: "", until: "",
-    persons: [], tools: [], text: "",
+    persons: [], tools: [], text: "", form: "", practice: "",
   });
 }
 
 export function homeFilterActive(): boolean {
   const f = homeFilter;
-  return !!(f.temaeSel || f.myRoleOnly || f.place_id || f.teacher_id || f.since || f.until || f.persons.length || f.tools.length || f.text.trim());
+  return !!(f.temaeSel || f.myRoleOnly || f.place_id || f.teacher_id || f.since || f.until || f.persons.length || f.tools.length || f.text.trim() || f.form || f.practice);
 }
 
 /** Build the backend filter; `expandCat` turns "cat:<id>" into the temae ids beneath it. */
@@ -44,5 +47,7 @@ export function toSessionFilter(expandCat: (catId: string) => string[]): Session
     persons: f.persons,
     tools: f.tools,
     text: f.text.trim() || null,
+    form: f.form || null,
+    practice: f.practice === "" ? null : f.practice === "1",
   };
 }

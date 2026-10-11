@@ -9,6 +9,7 @@
 #                                      stores the target as temae_id and this id as alias
 #                          modifiers = axis values applied on top of the target's defaults
 #   tana / hearth          plain lists; `parent` for grouping (e.g. daisu variants)
+#   event_kinds            kinds of 茶事 / 茶会 selectable on a record; `form` is chaji | chakai
 #
 # Axis values (see docs/chanote-design.md §2.4)
 #   tea     koicha | usucha | tsuzuki | "-" | "?"
@@ -20,7 +21,7 @@
 # Ids are stable identifiers, never shown to users. Do not rename; archive instead.
 
 id: urasenke
-version: "2026.09.3"
+version: "2026.10.1"
 name: { ja: 裏千家, romaji: Urasenke, en: Urasenke school }
 
 categories:
@@ -35,6 +36,7 @@ categories:
   - { id: okuden,        ja: 奥伝,     romaji: okuden,          en: Advanced transmissions }
   - { id: shichijishiki, ja: 七事式,   romaji: shichiji-shiki,  en: Seven group exercises }
   - { id: kagetsu,       ja: 花月之式, romaji: kagetsu no shiki, en: Kagetsu, parent: shichijishiki }
+  - { id: shaza,         ja: 且座之式, romaji: shaza no shiki,   en: Shaza, parent: shichijishiki }
 
 temae:
   # ---- 平点前 -------------------------------------------------------------
@@ -403,11 +405,18 @@ temae:
     alias_of: kagetsu
     modifiers: { room: yojohan }
   - id: shaza
-    ja: 且座
-    romaji: shaza
+    ja: 且座之式
+    romaji: shaza no shiki
     en: Shaza (incense, flowers, charcoal, tea by turns)
-    category: shichijishiki
+    category: shaza
     defaults: { tana: "-" }
+  - id: shaza.higashi-kinin
+    ja: 東貴人且座之式
+    romaji: higashi kinin shaza
+    en: Shaza with the host as a noble guest
+    category: shaza
+    alias_of: shaza
+    modifiers: { kinin: kinindate }
   - id: mawari-bana
     ja: 廻り花
     romaji: mawari-bana
@@ -462,6 +471,24 @@ temae:
     en: Hōma (scored kagetsu, koicha then usucha)
     category: shichijishiki
     defaults: { tana: "-" }
+  - id: shouwa
+    ja: 唱和之式
+    romaji: shōwa no shiki
+    en: Shōwa (flowers, incense, tea, then poems)
+    category: shichijishiki
+    defaults: { tana: "-" }
+  - id: seiyu
+    ja: 清友之式
+    romaji: seiyū no shiki
+    en: Seiyū (incense and tea with a scroll)
+    category: shichijishiki
+    defaults: { tana: "-" }
+  - id: hanayose
+    ja: 花寄之式
+    romaji: hanayose no shiki
+    en: Hanayose (everyone arranges flowers)
+    category: shichijishiki
+    defaults: { tea: "-", tana: "-" }
 
 tana:
   # Starting list — please review/extend in the app's list editor. Ids follow the romaji.
@@ -512,3 +539,25 @@ tool_categories:
   - { id: mizusashi, ja: 水指,   romaji: mizusashi,  en: Fresh-water jar }
   - { id: mizutsugi, ja: 水次,   romaji: mizutsugi,  en: Water pitcher }
   - { id: other,     ja: その他, romaji: sono ta,    en: Other }
+
+# Kinds of event selectable when a record's form is 茶事 or 茶会. Users can add their own
+# in the list editor; these are the common ones.
+event_kinds:
+  - { id: shogo,        form: chaji,  ja: 正午の茶事,   romaji: shōgo no chaji,    en: Midday tea gathering }
+  - { id: asa,          form: chaji,  ja: 朝茶事,       romaji: asa chaji,         en: Morning tea gathering (summer) }
+  - { id: yobanashi,    form: chaji,  ja: 夜咄の茶事,   romaji: yobanashi no chaji, en: Evening tea gathering by candlelight (winter) }
+  - { id: akatsuki,     form: chaji,  ja: 暁の茶事(夜込め), romaji: akatsuki no chaji, en: Dawn tea gathering }
+  - { id: hango,        form: chaji,  ja: 飯後の茶事,   romaji: hango no chaji,    en: After-meal tea gathering }
+  - { id: atomi,        form: chaji,  ja: 跡見の茶事,   romaji: atomi no chaji,    en: Follow-up gathering to see a previous event's utensils }
+  - { id: fuji,         form: chaji,  ja: 不時の茶事(臨時), romaji: fuji no chaji, en: Impromptu tea gathering }
+  - { id: yuzari,       form: chaji,  ja: 夕去りの茶事, romaji: yūzari no chaji,   en: Dusk tea gathering }
+  - { id: kuchikiri,    form: chaji,  ja: 口切りの茶事, romaji: kuchikiri no chaji, en: Opening of the new tea jar (November) }
+  - { id: ryurei,       form: chaji,  ja: 立礼の茶事,   romaji: ryūrei no chaji,   en: Tea gathering with tables and chairs }
+  - { id: ikkyaku-ittei, form: chaji, ja: 一客一亭の茶事, romaji: ikkyaku ittei no chaji, en: One host, one guest }
+  - { id: hatsugama,    form: chakai, ja: 初釜,         romaji: hatsugama,         en: First gathering of the year }
+  - { id: tsukigama,    form: chakai, ja: 月釜,         romaji: tsukigama,         en: Monthly open gathering }
+  - { id: oyose,        form: chakai, ja: 大寄せ,       romaji: ōyose,             en: Large open gathering }
+  - { id: nodate,       form: chakai, ja: 野点,         romaji: nodate,            en: Outdoor tea }
+  - { id: tsuizen,      form: chakai, ja: 追善茶会,     romaji: tsuizen chakai,    en: Memorial gathering }
+  - { id: robiraki,     form: chakai, ja: 炉開き,       romaji: robiraki,          en: Opening of the sunken hearth (November) }
+  - { id: nagori,       form: chakai, ja: 名残の茶会,   romaji: nagori no chakai,  en: Farewell-to-the-season gathering (October) }

@@ -8,6 +8,7 @@ const MIGRATIONS: &[(&str, &str)] = &[
     ("001_init", include_str!("../migrations/001_init.sql")),
     ("002_online", include_str!("../migrations/002_online.sql")),
     ("003_pack_prefix", include_str!("../migrations/003_pack_prefix.sql")),
+    ("004_events", include_str!("../migrations/004_events.sql")),
 ];
 
 /// Data migrations that need Rust (JSON rewriting etc.), run inside the same

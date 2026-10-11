@@ -1,4 +1,4 @@
-// Generates samples/sample-data.json: two years of fictional practice records in
+// Generates samples/sample-data.json: three years of fictional practice records in
 // chanote's export format, so anyone can try the app (Settings → Import JSON) and so the
 // browser mock (npm run dev) has realistic data. Deterministic (seeded).
 //
@@ -39,6 +39,8 @@ pack.temae.forEach((t, i) => mk(tid(t.id), "temae", t, t.category ? cid(t.catego
 pack.tana.forEach((x, i) => mk(tanaId(x.id), "tana", x, x.parent ? tanaId(x.parent) : null, i));
 pack.hearth.forEach((x, i) => mk(`hearth.${x.id}`, "hearth", x, null, i));
 (pack.tool_categories ?? []).forEach((x, i) => mk(`tool-cat.${x.id}`, "tool-cat", x, null, i));
+(pack.event_kinds ?? []).forEach((x, i) => mk(`event.${P}.${x.id}`, "event-kind", x, null, i, { form: x.form }));
+const evId = (id) => `event.${P}.${id}`;
 
 // ---- fictional people, places, tools -------------------------------------------
 const user = (id, kind, ja, romaji, extra = {}) => vocab.push({
@@ -56,6 +58,7 @@ user("person.suzuki", "person", "鈴木さん", "Suzuki-san");
 user("place.shofu-an", "place", "松風庵", "Shofu-an");
 user("place.seigetsu-an", "place", "清月庵", "Seigetsu-an");
 user("place.kaikan", "place", "文化会館 和室", "Bunka Kaikan");
+user("place.home", "place", "自宅", "jitaku");
 user("tool.chawan-kuro", "tool", "黒楽茶碗 銘「山里」", "kuro raku chawan", { parent: "tool-cat.chawan", meta: { note: "楽家 十五代 直入。箱書あり。" } });
 user("tool.chawan-hagi", "tool", "萩茶碗", "hagi chawan", { parent: "tool-cat.chawan" });
 user("tool.natsume", "tool", "利休形 中棗", "rikyu-gata chu-natsume", { parent: "tool-cat.usuki" });
@@ -123,8 +126,9 @@ function temaeRow(id, date, host, mine) {
   return row;
 }
 
+const sp = (person_id, role) => ({ person_id, name_free: null, role, seat: null, is_last: false, role_note: null });
 const sessions = [];
-const start = new Date(2024, 8, 1); // Sep 2024
+const start = new Date(2023, 8, 2); // Sep 2023
 const end = new Date(2026, 8, 20);
 for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
   const dow = d.getDay();
@@ -153,27 +157,119 @@ for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
   }
   sessions.push({
     id: null, date, date_prec: "day", place_id: place, place_note: null,
-    kind: workshop ? "koshukai" : "keiko", online, note: workshop ? "講習会" : null,
-    persons: [{ person_id: teacher, name_free: null, role: "teacher" }],
+    form: workshop ? "koshukai" : "temae", event_kind: null, practice: true,
+    my_role: null, my_seat: null, online, note: workshop ? "講習会" : null,
+    persons: [sp(teacher, "teacher")],
     temae,
   });
 }
-// one real gathering
-sessions.push({
-  id: null, date: "2026-04-12", date_prec: "day", place_id: "place.kaikan", place_note: null,
-  kind: "honban", online: false, note: "春の茶会。薄茶席の担当。",
-  persons: [{ person_id: "person.yamada", name_free: null, role: "teacher" }],
-  temae: [temaeRow("hiradate.usucha", "2026-04-12", "person.self", true)],
-});
+
+// ---- self practice at home (no teacher), a few times a year ------------------------
+for (const date of ["2023-11-23", "2024-02-11", "2024-05-03", "2024-09-16", "2025-01-13", "2025-04-29", "2025-08-11", "2025-11-03", "2026-02-11", "2026-05-04", "2026-08-11"]) {
+  const row = temaeRow(pick([...hira, ...konarai]), date, "person.self", true);
+  row.persons = []; row.tools = []; row.note = "自主稽古。";
+  sessions.push({
+    id: null, date, date_prec: "day", place_id: "place.home", place_note: null,
+    form: "temae", event_kind: null, practice: true, my_role: "teishu", my_seat: null, online: false,
+    note: null, persons: [], temae: [row],
+  });
+}
+
+// ---- practice chaji (稽古茶事) with the teacher, roughly three a year ----------------
+const CHAJI_KINDS = ["shogo", "shogo", "shogo", "yobanashi", "asa", "hango", "kuchikiri"];
+function chaji(date, kind, practice, host, myRole, mySeat, place, note) {
+  const m = Number(date.slice(5, 7));
+  const guests = students.filter((p) => p !== host).slice(0, 3);
+  const persons = [];
+  if (practice) persons.push(sp("person.yamada", "teacher"));
+  if (host !== "person.self") persons.push(sp(host, "host"));
+  // seats: me first if I am main guest, then the others
+  let seat = 1;
+  if (mySeat === 1) seat = 2;
+  guests.forEach((g, i) => {
+    const last = i === guests.length - 1 && myRole !== "tsume";
+    persons.push({ ...sp(g, "guest"), seat: seat === mySeat ? ++seat : seat, is_last: last });
+    seat++;
+  });
+  if (host === "person.self") persons.push(sp(pick(["person.suzuki", "person.tanaka"]), "hanto"));
+  const sumi = m >= 5 && m <= 10 ? "shozumi" : "shozumi";
+  const seq = kind === "asa" ? [sumi, "hiradate.koicha", "gozumi", "hiradate.usucha"]
+            : kind === "hango" ? ["hiradate.koicha", "hiradate.usucha"]
+            : [sumi, "hiradate.koicha", "gozumi", "hiradate.usucha"];
+  const temae = seq.map((id) => {
+    const r = temaeRow(id, date, host, host === "person.self");
+    r.persons = []; r.tools = [];
+    if (host !== "person.self") { r.my_role = myRole; r.my_seat = mySeat; }
+    if (id === "hiradate.koicha" && host === "person.self") {
+      r.tools.push({ tool_id: "tool.chaire-katatsuki", name_free: null, external_ref: null });
+      r.tools.push({ tool_id: "tool.shifuku-hatsushimo", name_free: null, external_ref: null });
+      r.tools.push({ tool_id: "tool.chawan-kuro", name_free: null, external_ref: null });
+    }
+    if (practice && host === "person.self" && chance(0.5)) r.note = pick(REMARKS);
+    return r;
+  });
+  return {
+    id: null, date, date_prec: "day", place_id: place, place_note: null,
+    form: "chaji", event_kind: evId(kind), practice, my_role: myRole, my_seat: mySeat, online: false,
+    note, persons, temae,
+  };
+}
+const practiceChaji = [
+  ["2023-12-09", "shogo", "person.self", "teishu", null],
+  ["2024-03-23", "shogo", "person.sato", "shokyaku", 1],
+  ["2024-07-13", "asa", "person.anna", "kyaku", 2],
+  ["2024-11-16", "kuchikiri", "person.self", "teishu", null],
+  ["2025-02-22", "yobanashi", "person.tanaka", "tsume", 4],
+  ["2025-06-14", "shogo", "person.self", "teishu", null],
+  ["2025-10-11", "hango", "person.marco", "shokyaku", 1],
+  ["2026-01-24", "yobanashi", "person.self", "teishu", null],
+  ["2026-05-16", "asa", "person.sato", "kyaku", 3],
+  ["2026-09-12", "shogo", "person.anna", "mizuya", null],
+];
+for (const [date, kind, host, role, seat] of practiceChaji) {
+  sessions.push(chaji(date, kind, true, host, role, seat, "place.shofu-an", "稽古茶事。"));
+}
+// real chaji: invited twice, hosted once at home
+sessions.push(chaji("2024-10-26", "shogo", false, "person.sato", "shokyaku", 1, "place.seigetsu-an", "佐藤さんの正午の茶事に正客で招かれる。"));
+sessions.push(chaji("2025-12-06", "yobanashi", false, "person.anna", "kyaku", 2, "place.seigetsu-an", null));
+sessions.push(chaji("2026-06-20", "shogo", false, "person.self", "teishu", null, "place.home", "自宅で初めての茶事。"));
+
+// ---- chakai (real gatherings): hatsugama every January, a spring gathering, tea for guests at home
+for (const [date, kind, place, role, seat, note] of [
+  ["2024-01-14", "hatsugama", "place.shofu-an", "kyaku", 3, "初釜。"],
+  ["2025-01-12", "hatsugama", "place.shofu-an", "hanto", null, "初釜。半東を務める。"],
+  ["2026-01-11", "hatsugama", "place.shofu-an", "teishu", null, "初釜。濃茶席の点前。"],
+  ["2024-04-14", "oyose", "place.kaikan", "mizuya", null, "春の大寄せ。水屋。"],
+  ["2025-11-02", "robiraki", "place.shofu-an", "kyaku", 2, "炉開き。"],
+  ["2025-05-18", null, "place.home", "teishu", null, "友人に一服。"],
+  ["2026-03-15", null, "place.home", "teishu", null, "両親に一服。"],
+]) {
+  const mine = role === "teishu";
+  const id = kind === "hatsugama" && mine ? "hiradate.koicha" : "hiradate.usucha";
+  const row = temaeRow(id, date, mine ? "person.self" : "person.yamada", mine);
+  row.persons = []; row.note = null;
+  if (!mine) { row.my_role = role; row.my_seat = seat; }
+  const persons = [];
+  if (place !== "place.home") persons.push(sp("person.yamada", "teacher"));
+  if (place === "place.home") persons.push({ ...sp(null, "guest"), name_free: pick(["友人2名", "両親"]), seat: 1 });
+  else if (mine) persons.push(...students.slice(0, 3).map((g, i) => ({ ...sp(g, "guest"), seat: i + 1, is_last: i === 2 })));
+  sessions.push({
+    id: null, date, date_prec: "day", place_id: place, place_note: null,
+    form: "chakai", event_kind: kind ? evId(kind) : null, practice: false, my_role: role, my_seat: seat, online: false,
+    note, persons, temae: [row],
+  });
+}
 // a vaguely-remembered old record
 sessions.push({
-  id: null, date: "2024-06-01", date_prec: "month", place_id: "place.shofu-an", place_note: null,
-  kind: "keiko", online: false, note: "初めての風炉の稽古。詳細は覚えていない。",
-  persons: [{ person_id: "person.yamada", name_free: null, role: "teacher" }],
-  temae: [{ ...temaeRow("hiradate.usucha", "2024-06-01", "person.self", true), tana_id: "?", hearth: "furo", persons: [], tools: [] }],
+  id: null, date: "2023-06-01", date_prec: "month", place_id: "place.shofu-an", place_note: null,
+  form: "temae", event_kind: null, practice: true, my_role: null, my_seat: null,
+  online: false, note: "初めての風炉の稽古。詳細は覚えていない。",
+  persons: [sp("person.yamada", "teacher")],
+  temae: [{ ...temaeRow("hiradate.usucha", "2023-06-01", "person.self", true), tana_id: "?", hearth: "furo", persons: [], tools: [] }],
 });
+sessions.sort((a, b) => a.date.localeCompare(b.date));
 
-const doc = { app: "chanote", schema_version: 2, exported_at: "2026-09-20T00:00:00Z", vocab, sessions };
+const doc = { app: "chanote", schema_version: 3, exported_at: "2026-10-11T00:00:00Z", vocab, sessions };
 fs.mkdirSync(path.join(root, "samples"), { recursive: true });
 fs.writeFileSync(path.join(root, "samples/sample-data.json"), JSON.stringify(doc, null, 1) + "\n");
 console.log(`sessions: ${sessions.length}, temae: ${sessions.reduce((a, s) => a + s.temae.length, 0)}, vocab: ${vocab.length}`);

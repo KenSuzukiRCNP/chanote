@@ -44,14 +44,20 @@ hearth:
 
 tool_categories:
   - { id: chawan, ja: 茶碗, romaji: chawan, en: Tea bowl }
+
+# kinds of event the user can pick when a record is a chaji or chakai (optional)
+event_kinds:
+  - { id: shogo,     form: chaji,  ja: 正午の茶事, romaji: shōgo no chaji, en: Midday tea gathering }
+  - { id: hatsugama, form: chakai, ja: 初釜,       romaji: hatsugama }
 ```
 
 ### Ids in the app
 
 Inside the app, ids are scoped by pack: `hiradate` in `omotesenke.yaml` becomes
 `temae.omotesenke.hiradate`, categories `temae-cat.omotesenke.hira`, shelves
-`tana.omotesenke.daisu`. Two schools can therefore both have a `karamono` without
-colliding. Pack authors never write the prefix; the loader adds it.
+`tana.omotesenke.daisu`, event kinds `event.omotesenke.shogo`. Two schools can therefore
+both have a `karamono` without colliding. Pack authors never write the prefix; the loader
+adds it.
 
 ### Axis values usable in `defaults` / `modifiers`
 

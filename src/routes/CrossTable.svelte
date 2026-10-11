@@ -10,14 +10,15 @@
     if (v == null) return t("value.unset");
     if (v === "?") return t("value.unknown");
     switch (axis) {
-      case "temae": case "alias": case "tana": case "host": case "teacher": case "place":
+      case "temae": case "alias": case "tana": case "host": case "teacher": case "place": case "event_kind":
         if (v === "-") return axisLabel(axis === "tana" ? "tana" : "x", "-");
         return term(vocab.byId[v]) || v;
       case "hearth": return term(vocab.byId["hearth." + v]) || v;
       case "hearth_group": return t("stats.hearth." + v);
       case "tea": case "katte": case "room": case "kinin": return axisLabel(axis, v);
-      case "my_role": return t("role." + v);
-      case "session_kind": return t("session.kind." + v);
+      case "my_role": case "session_my_role": return t("role." + v);
+      case "form": return t("session.form." + v);
+      case "practice": return axisLabel("practice", v);
       default: return v;
     }
   }
@@ -31,10 +32,12 @@
     katte: ["jun", "gyaku"],
     room: ["koma", "yojohan", "hiroma"],
     kinin: ["-", "kinindate", "kiyotsugu"],
-    my_role: ["teishu", "shokyaku", "kyaku", "hanto", "mizuya", "kengaku", "-"],
-    session_kind: ["keiko", "koshukai", "honban"],
+    my_role: ["teishu", "shokyaku", "kyaku", "tsume", "hanto", "mizuya", "kengaku", "-"],
+    session_my_role: ["teishu", "shokyaku", "kyaku", "tsume", "hanto", "mizuya", "kengaku", "-"],
+    form: ["temae", "chaji", "chakai", "koshukai"],
+    practice: ["practice", "real"],
   };
-  const VOCAB_KIND: Record<string, string> = { temae: "temae", alias: "temae", tana: "tana", host: "person", teacher: "person", place: "place" };
+  const VOCAB_KIND: Record<string, string> = { temae: "temae", alias: "temae", tana: "tana", host: "person", teacher: "person", place: "place", event_kind: "event-kind" };
   function orderKeys(axis: string, keys: string[]): string[] {
     const rank = (k: string): number => {
       if (!k || k === "?") return 1e9;

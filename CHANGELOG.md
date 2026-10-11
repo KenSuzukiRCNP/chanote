@@ -9,13 +9,48 @@ one-paragraph English summary; the details are in Japanese.
 
 ## [Unreleased]
 
-### 修正
-- GitHub Actions の macOS ビルドが署名で失敗していたのを修正(ad-hoc 署名に変更)。
-
 ### 予定
 - 人物・場所の入力補完(コンボボックス)
 - 統計の期間の任意指定、CSV の列選択
 - 流派パック(裏千家以外)の追加 ── [docs/school-packs.md](docs/school-packs.md) 参照
+
+## [0.4.0] - 2026-10-11
+
+**Summary.** A record is now an *event*: its form (lesson, chaji, chakai, workshop), the
+kind of chaji / chakai, a practice-or-real flag, my role at the event and a roster (host,
+guests with seats, assistant, back room) that every temae inherits unless it lists its own
+participants. New "Events" statistics, form / practice filters, a Duplicate button, four more
+七事式 procedures, and event kinds as editable vocabulary. Database migration 004 and export
+schema 3 (older exports still import).
+
+### 追加
+- **会の形式と稽古/本番**: 「稽古 / 講習会 / 本番」の区分を、**形式**(点前・茶事・茶会・講習会)と
+  **稽古**チェック(オフ=本番)の2軸に分けました。練習茶事は「茶事 + 稽古」、自宅でのおもてなしは
+  「茶会 + 本番」のように迷わず記録できます。
+- **会の種類**: 茶事(正午・朝・夜咄・暁・飯後・跡見・不時・夕去り・口切・立礼・一客一亭)と
+  茶会(初釜・月釜・大寄せ・野点・追善・炉開き・名残)を選べます。リスト編集「会の種類」で追加できます。
+- **会の参加者(名簿)**: 亭主・連客(席順・詰)・半東・水屋・見学を会全体で一度だけ書きます。
+  点前に参加者が書かれていなければこの名簿を引き継ぎ、統計もそれを使います。「この点前だけ変える」で
+  点前ごとの差分も書けます。
+- **この会での自分**: 会全体での役割(亭主・正客・客・詰・半東・水屋・見学)と席。
+  点前行の自分の役割の既定値にもなります。役割に「詰」を追加。
+- **統計「会」タブ**: 形式別・種類別の回数(稽古 / 本番)、会での自分の役割別の回数と最終日。
+  統計全体に「稽古のみ / 本番のみ」の切り替え。クロス表に 形式・会の種類・稽古/本番・会での自分の役割 の軸。
+- **絞り込み**に 形式 と 稽古/本番 を追加。一覧には会の種類と「本番」のバッジ、名簿の行を表示。
+- **複製**: 記録の編集画面から、日付以外をコピーした新しい記録を作れます(講習会2日目など)。
+- **裏千家パック**: 七事式に 唱和之式・清友之式・花寄之式 を追加。且座之式を分類にし、
+  東貴人且座之式をそのバリエーション(貴人点)として追加。
+- サンプルデータを3年分(222件)に拡充。稽古茶事・本番の茶事・茶会・自主稽古を含みます。
+
+### 変更
+- 書き出し形式 `schema_version: 3`(`kind` → `form` / `practice`、名簿、会での役割)。
+  schema 1・2 の JSON はそのまま読み込めます。CSV に form / event_kind / practice / session_my_role /
+  roster 列を追加。参加者列は引き継ぎ後の値です。
+- データベースはマイグレーション 004 で自動更新されます。既存の「稽古」は 点前+稽古、「講習会」は
+  講習会+稽古、「本番」は 形式=不明+本番 になります(絞り込み「形式: 不明」で見つけて直せます)。
+
+### 修正
+- GitHub Actions の macOS ビルドが署名で失敗していたのを修正(ad-hoc 署名に変更)。
 
 ## [0.3.0] - 2026-09-27
 
@@ -101,7 +136,8 @@ release builds for macOS, Windows and Linux.
   ホバーで表示。名前は日本語かアルファベットのどちらか一方だけでも登録できます。
 - アプリアイコン、macOS(Apple Silicon / Intel)・Windows・Linux 向けの配布ビルド。
 
-[Unreleased]: https://github.com/KenSuzukiRCNP/chanote/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/KenSuzukiRCNP/chanote/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/KenSuzukiRCNP/chanote/releases/tag/v0.4.0
 [0.3.0]: https://github.com/KenSuzukiRCNP/chanote/releases/tag/v0.3.0
 [0.2.0]: https://github.com/KenSuzukiRCNP/chanote/releases/tag/v0.2.0
 [0.1.0]: https://github.com/KenSuzukiRCNP/chanote/releases/tag/v0.1.0

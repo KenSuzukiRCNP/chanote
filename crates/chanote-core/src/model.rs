@@ -86,6 +86,13 @@ pub struct ResolvedTemae {
     pub axes: AxisValues,
 }
 
+/// Session forms (what happened). `practice` says whether it was a rehearsal / lesson.
+pub const SESSION_FORMS: &[&str] = &["temae", "chaji", "chakai", "koshukai", "?"];
+/// My role at an event or in a temae. `tsume` = last guest (お詰).
+pub const MY_ROLES: &[&str] = &["teishu", "hanto", "mizuya", "shokyaku", "kyaku", "tsume", "kengaku", "-"];
+/// Roles in the session roster.
+pub const SESSION_ROLES: &[&str] = &["teacher", "host", "guest", "hanto", "mizuya", "kengaku"];
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Session {
     #[serde(default)]
@@ -95,8 +102,20 @@ pub struct Session {
     pub date_prec: String,
     pub place_id: Option<String>,
     pub place_note: Option<String>,
-    #[serde(default = "default_kind")]
-    pub kind: String,
+    /// temae | chaji | chakai | koshukai | "?"
+    #[serde(default = "default_form")]
+    pub form: String,
+    /// Kind of event (vocab id of kind `event-kind`, e.g. event.urasenke.shogo), "?" or None.
+    #[serde(default)]
+    pub event_kind: Option<String>,
+    /// Lesson / rehearsal (true) or the real thing (false).
+    #[serde(default = "default_true")]
+    pub practice: bool,
+    /// My role at the event as a whole (teishu | hanto | mizuya | shokyaku | kyaku | tsume | kengaku | -).
+    #[serde(default)]
+    pub my_role: Option<String>,
+    #[serde(default)]
+    pub my_seat: Option<i64>,
     /// Joined remotely (place_id is still the group's place).
     #[serde(default)]
     pub online: bool,
@@ -105,13 +124,19 @@ pub struct Session {
     pub persons: Vec<SessionPerson>,
     #[serde(default)]
     pub temae: Vec<Temae>,
+    /// Pre-v0.4 field (schema ≤ 2 exports): keiko | koshukai | honban. Only read, never written.
+    #[serde(default, skip_serializing)]
+    pub kind: Option<String>,
 }
 
 fn default_date_prec() -> String {
     "day".into()
 }
-fn default_kind() -> String {
-    "keiko".into()
+fn default_form() -> String {
+    "temae".into()
+}
+fn default_true() -> bool {
+    true
 }
 
 impl Default for Session {
@@ -122,20 +147,34 @@ impl Default for Session {
             date_prec: default_date_prec(),
             place_id: None,
             place_note: None,
-            kind: default_kind(),
+            form: default_form(),
+            event_kind: None,
+            practice: true,
+            my_role: None,
+            my_seat: None,
             online: false,
             note: None,
             persons: vec![],
             temae: vec![],
+            kind: None,
         }
     }
 }
 
+/// One line of the session roster. `teacher` rows are the teachers present; the others
+/// (host | guest | hanto | mizuya | kengaku) are inherited by temae rows that list no
+/// participants of their own.
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
 pub struct SessionPerson {
     pub person_id: Option<String>,
     pub name_free: Option<String>,
-    pub role: String, // teacher | guest
+    pub role: String,
+    #[serde(default)]
+    pub seat: Option<i64>,
+    #[serde(default)]
+    pub is_last: bool,
+    #[serde(default)]
+    pub role_note: Option<String>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
@@ -149,7 +188,7 @@ pub struct Temae {
     pub host_id: Option<String>,
     pub host_free: Option<String>,
     pub teacher_id: Option<String>,
-    pub my_role: Option<String>,
+    pub my_role: Option<String>, // see MY_ROLES
     pub my_role_note: Option<String>,
     pub my_seat: Option<i64>,
     pub hearth: Option<String>,
@@ -193,7 +232,10 @@ pub struct SessionSummary {
     pub date: Option<String>,
     pub date_prec: String,
     pub place_id: Option<String>,
-    pub kind: String,
+    pub form: String,
+    pub event_kind: Option<String>,
+    pub practice: bool,
+    pub my_role: Option<String>,
     pub online: bool,
     pub temae_count: i64,
 }
