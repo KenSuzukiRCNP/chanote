@@ -61,7 +61,7 @@
 </script>
 
 <!-- 付物 -->
-<div class="col-span-4 flex flex-wrap gap-x-4 gap-y-1 items-center pt-1">
+<div class="col-span-2 md:col-span-4 flex flex-wrap gap-x-4 gap-y-1 items-center pt-1">
   <span class="label mb-0">{t("temae.tsukimono")}{#if !isKagetsu}<span class="text-stone-300"> ({t("temae.kagetsuOnly")})</span>{/if}</span>
   {#each TSUKIMONO as k}
     <label class="text-sm flex items-center gap-1" class:opacity-50={!isKagetsu}>
@@ -72,7 +72,7 @@
 </div>
 
 <!-- 参加者・席順 -->
-<div class="col-span-4 pt-2 border-t border-line">
+<div class="col-span-2 md:col-span-4 pt-2 border-t border-line">
   <div class="flex items-center gap-3 mb-1">
     <span class="label mb-0">{t("temae.participants")}</span>
     <span class="text-[11px] text-stone-400">{t("temae.seatHelp")}</span>
@@ -85,17 +85,17 @@
     {/if}
   </div>
   <!-- self: always the first row, bound to my_role / my_seat -->
-  <div class="grid grid-cols-[3rem_1fr_1fr_6rem_auto_1fr_auto] gap-1 items-center mb-1 text-matcha-deep">
+  <div class="person-row text-matcha-deep">
     <input type="number" min="1" class="field py-0.5" placeholder="#" bind:value={temae.my_seat} disabled={!selfIsGuest} title={t("temae.mySeat")} />
     <span class="px-2 text-sm font-medium">{t("temae.myRole")}</span>
-    <span></span>
+    <span class="hidden md:block"></span>
     <select class="field py-0.5" value={temae.my_role ?? ""} onchange={(e) => setMyRole((e.currentTarget.value || null) as MyRole | null)}>
       <option value="">—</option>
       {#each myRoles as r}<option value={r}>{t("role." + r)}</option>{/each}
     </select>
-    <span></span>
-    <input class="field py-0.5" placeholder={t("temae.roleNote")} bind:value={temae.my_role_note} />
-    <span></span>
+    <span class="hidden md:block"></span>
+    <input class="field py-0.5 col-span-3 md:col-span-1" placeholder={t("temae.roleNote")} bind:value={temae.my_role_note} />
+    <span class="hidden md:block"></span>
   </div>
   {#if inherits}
     <div class="text-xs text-stone-500 pl-1">
@@ -106,19 +106,19 @@
     </div>
   {/if}
   {#each temae.persons as p, i (i)}
-    <div class="grid grid-cols-[3rem_1fr_1fr_6rem_auto_1fr_auto] gap-1 items-center mb-1">
-      <input type="number" min="1" class="field py-0.5" placeholder="#" bind:value={p.seat} title={t("temae.seat")} />
-      <select class="field py-0.5" bind:value={p.person_id}>
+    <div class="person-row">
+      <input type="number" min="1" class="field py-0.5 order-1 md:order-none" placeholder="#" bind:value={p.seat} title={t("temae.seat")} />
+      <select class="field py-0.5 order-2 md:order-none" bind:value={p.person_id}>
         <option value={null}>—</option>
         {#each persons as v}<option value={v.id}>{term(v)}</option>{/each}
       </select>
-      <input class="field py-0.5" placeholder={t("temae.nameFree")} bind:value={p.name_free} />
-      <select class="field py-0.5" bind:value={p.role}>
+      <input class="field py-0.5 order-5 md:order-none col-span-2 md:col-span-1" placeholder={t("temae.nameFree")} bind:value={p.name_free} />
+      <select class="field py-0.5 order-3 md:order-none" bind:value={p.role}>
         {#each partRoles as r}<option value={r}>{t("role." + r)}</option>{/each}
       </select>
-      <label class="text-xs flex items-center gap-1 whitespace-nowrap"><input type="checkbox" bind:checked={p.is_last} />{t("temae.isLast")}</label>
-      <input class="field py-0.5" placeholder={t("temae.roleNote")} bind:value={p.role_note} />
-      <span class="flex gap-0.5 text-stone-400">
+      <label class="text-xs flex items-center gap-1 whitespace-nowrap order-4 md:order-none"><input type="checkbox" bind:checked={p.is_last} />{t("temae.isLast")}</label>
+      <input class="field py-0.5 order-6 md:order-none" placeholder={t("temae.roleNote")} bind:value={p.role_note} />
+      <span class="flex gap-0.5 text-stone-400 order-7 md:order-none">
         <button class="px-1 hover:text-ink" onclick={() => move(i, -1)} title="↑">↑</button>
         <button class="px-1 hover:text-ink" onclick={() => move(i, 1)} title="↓">↓</button>
         <button class="px-1 hover:text-red-600" onclick={() => temae.persons.splice(i, 1)}>×</button>
@@ -128,15 +128,15 @@
 </div>
 
 <!-- 道具 -->
-<div class="col-span-4 pt-2 border-t border-line">
+<div class="col-span-2 md:col-span-4 pt-2 border-t border-line">
   <div class="flex items-center gap-3 mb-1">
     <span class="label mb-0">{t("temae.tools")}</span>
     <span class="grow"></span>
     <button class="btn py-0.5 text-xs" onclick={() => addTool()}>＋ {t("temae.addTool")}</button>
   </div>
   {#each temae.tools as tool, i (i)}
-    <div class="grid grid-cols-[1fr_1fr_8rem_auto] gap-1 items-center mb-1">
-      <select class="field py-0.5" value={tool.tool_id ?? ""} title={toolNote(tool.tool_id)}
+    <div class="grid grid-cols-[1fr_auto] md:grid-cols-[1fr_1fr_8rem_auto] gap-1 items-center mb-1">
+      <select class="field py-0.5 order-1 md:order-none" value={tool.tool_id ?? ""} title={toolNote(tool.tool_id)}
               onchange={(e) => { const id = e.currentTarget.value || null; tool.tool_id = id; const pair = id ? (vocab.byId[id]?.meta as { paired_with?: string } | null)?.paired_with : null; if (pair && !temae.tools.some((x) => x.tool_id === pair)) temae.tools.push({ tool_id: pair, name_free: null, external_ref: null }); }}>
         <option value="">—</option>
         {#each groups as g}
@@ -145,9 +145,9 @@
           </optgroup>
         {/each}
       </select>
-      <input class="field py-0.5" placeholder={t("temae.toolFree")} bind:value={tool.name_free} />
-      <input class="field py-0.5" placeholder={t("temae.toolRef")} bind:value={tool.external_ref} />
-      <button class="px-1 text-stone-400 hover:text-red-600" onclick={() => temae.tools.splice(i, 1)}>×</button>
+      <input class="field py-0.5 order-3 md:order-none col-span-2 md:col-span-1" placeholder={t("temae.toolFree")} bind:value={tool.name_free} />
+      <input class="field py-0.5 order-4 md:order-none col-span-2 md:col-span-1" placeholder={t("temae.toolRef")} bind:value={tool.external_ref} />
+      <button class="px-1 text-stone-400 hover:text-red-600 order-2 md:order-none" onclick={() => temae.tools.splice(i, 1)}>×</button>
     </div>
   {/each}
 </div>

@@ -10,9 +10,38 @@ one-paragraph English summary; the details are in Japanese.
 ## [Unreleased]
 
 ### 予定
+- 端末間の同期(同期フォルダ + 変更ログ、v0.5.1)
+- iOS の HEIC サムネイル
 - 人物・場所の入力補完(コンボボックス)
 - 統計の期間の任意指定、CSV の列選択
 - 流派パック(裏千家以外)の追加 ── [docs/school-packs.md](docs/school-packs.md) 参照
+
+## [0.5.0] - 2026-10-16
+
+**Summary.** chanote runs on phones: iOS (installed from Xcode on your own device for now)
+and Android (APK on the Releases page). Single-column layout with bottom tabs below 768 px,
+system file pickers, exports and backups to the Files app (iOS) or the save dialog (Android),
+restore without restart. 灰形 added to the Urasenke pack. Release notes per version live in
+`docs/releases/`.
+
+### 追加
+- **スマートフォン版**: 同じコードから iOS / Android をビルドできるようにしました(Tauri 2 モバイル)。
+  幅 768px 未満では1列レイアウトと下部タブに切り替わります。入力欄は 16px(iOS のズーム防止)。
+- **モバイルでのファイル操作**: 書き出し・バックアップは iOS では「ファイル」アプリ(このiPhone内 → chanote)、
+  Android では保存ダイアログへ。読み込み・復元・写真の添付はファイルピッカーから(写真は WebView 側で読み、
+  バイナリのまま Rust へ渡します)。
+- **Android の APK** を GitHub Actions で作成し Release に添付(署名用 Secrets があればリリース署名、
+  なければデバッグ署名)。`scripts/android-signing.py`。
+- **裏千家パック**: 炭手前に 灰形 を追加(風炉・茶なし)。
+- 設定に「動作環境」を表示。`docs/releases/vX.Y.Z.md` にリリースノート。
+
+### 変更
+- **復元**は再起動せず、その場でデータベースを開き直して画面を再読み込みします(iOS はアプリを再起動できないため)。
+- 読み込み元はファイルパスまたは JSON 本文のどちらでも受け付けるようになりました(内部 API)。
+
+### 既知の制限
+- iOS で HEIC を添付すると原本は保存されますがサムネイルは作られません(次版で対応予定)。
+- iOS 版は Apple Developer Program なしでは配布できないため、Releases には含まれません。
 
 ## [0.4.0] - 2026-10-11
 
@@ -136,7 +165,8 @@ release builds for macOS, Windows and Linux.
   ホバーで表示。名前は日本語かアルファベットのどちらか一方だけでも登録できます。
 - アプリアイコン、macOS(Apple Silicon / Intel)・Windows・Linux 向けの配布ビルド。
 
-[Unreleased]: https://github.com/KenSuzukiRCNP/chanote/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/KenSuzukiRCNP/chanote/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/KenSuzukiRCNP/chanote/releases/tag/v0.5.0
 [0.4.0]: https://github.com/KenSuzukiRCNP/chanote/releases/tag/v0.4.0
 [0.3.0]: https://github.com/KenSuzukiRCNP/chanote/releases/tag/v0.3.0
 [0.2.0]: https://github.com/KenSuzukiRCNP/chanote/releases/tag/v0.2.0

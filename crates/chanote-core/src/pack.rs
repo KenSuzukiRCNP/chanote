@@ -306,7 +306,7 @@ mod tests {
             assert!(db.vocab_get(&format!("temae.urasenke.{id}")).unwrap().is_some(), "{id}");
         }
         assert!(db.vocab_list("tool-cat", false).unwrap().len() >= 7);
-        for id in ["shouwa", "seiyu", "hanayose"] {
+        for id in ["shouwa", "seiyu", "hanayose", "haigata"] {
             assert!(db.vocab_get(&format!("temae.urasenke.{id}")).unwrap().is_some(), "{id}");
         }
         let r = db.resolve_temae("temae.urasenke.shaza.higashi-kinin").unwrap();

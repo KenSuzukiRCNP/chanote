@@ -7,3 +7,11 @@ target
 *.sqlite-journal
 .DS_Store
 *.tar.gz
+# generated mobile projects: build outputs and signing material
+src-tauri/gen/android/app/build
+src-tauri/gen/android/.gradle
+src-tauri/gen/android/keystore.properties
+src-tauri/gen/android/*.jks
+src-tauri/gen/apple/build
+src-tauri/gen/apple/Externals
+*.xcuserstate

@@ -85,7 +85,7 @@
   }
 </script>
 
-<div class="flex items-center gap-3 mb-3">
+<div class="flex items-center gap-3 mb-3 flex-wrap">
   <h1 class="text-lg font-semibold">{t("home.title")}</h1>
   <span class="text-sm text-stone-400">{rows.length}</span>
   <span class="grow"></span>
@@ -97,13 +97,13 @@
 
 {#if showFilters}
   <div class="card max-w-3xl mb-4 flex flex-col gap-2 text-sm">
-    <div class="grid grid-cols-[auto_1fr_auto_auto] gap-2 items-center">
+    <div class="grid grid-cols-[auto_1fr] md:grid-cols-[auto_1fr_auto_auto] gap-2 items-center">
       <span class="label mb-0">{t("temae.temae")}</span>
       <TemaePicker bind:value={homeFilter.temaeSel} withCategories placeholder={t("home.anyTemae")} />
       <label class="flex items-center gap-1 whitespace-nowrap"><input type="checkbox" bind:checked={homeFilter.myRoleOnly} />{t("stats.hostOnly")}</label>
       <span></span>
     </div>
-    <div class="grid grid-cols-[auto_1fr_auto_1fr] gap-2 items-center">
+    <div class="grid grid-cols-[auto_1fr] md:grid-cols-[auto_1fr_auto_1fr] gap-2 items-center">
       <span class="label mb-0">{t("session.form")}</span>
       <select class="field" bind:value={homeFilter.form}>
         <option value="">{t("home.formAny")}</option>
@@ -126,7 +126,7 @@
         {#each teachers() as p}<option value={p.id}>{term(p)}</option>{/each}
       </select>
       <span class="label mb-0">{t("home.period")}</span>
-      <span class="flex gap-1 items-center">
+      <span class="flex gap-1 items-center flex-wrap">
         <input type="date" class="field" bind:value={homeFilter.since} /> –
         <input type="date" class="field" bind:value={homeFilter.until} />
       </span>
@@ -172,7 +172,7 @@
 <div class="flex flex-col gap-3 max-w-3xl">
   {#each rows as r (r.id)}
     <a href={"#/edit/" + r.id} class="card block hover:border-matcha transition">
-      <div class="flex items-baseline gap-3">
+      <div class="flex items-baseline gap-x-3 gap-y-1 flex-wrap">
         <span class="font-mono text-sm">{fmtDate(r.date, r.date_prec)}</span>
         <span class="font-medium">{term(get(r.place_id)) || "—"}</span>
         {#if r.online}

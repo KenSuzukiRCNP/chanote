@@ -1,10 +1,11 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { api } from "$lib/api";
-  import { pickSavePath, pickOpenPaths } from "$lib/dialogs";
+  import { pickSavePath, pickOpenPaths, readPickedBytes, readPickedText, writePickedBytes, writePickedText, baseName } from "$lib/dialogs";
+  import { platform, isIOS } from "$lib/platform.svelte";
   import { loadVocab } from "$lib/vocab.svelte";
   import { i18n, t, setLang, type UiLang, type TermMode } from "$lib/i18n.svelte";
-  import type { AppInfo, ImportReport, ProfileInfo } from "$lib/types";
+  import type { AppInfo, ImportReport, ImportSource, ProfileInfo } from "$lib/types";
   import ImportDialog from "./ImportDialog.svelte";
 
   let info = $state<AppInfo | null>(null);
@@ -47,25 +48,41 @@
 
   async function doExport(format: "json" | "csv") {
     msg = null;
-    const path = await pickSavePath(`chanote-${stamp()}.${format}`, format);
-    if (!path) return;
+    const name = `chanote-${stamp()}.${format}`;
     try {
-      await api.exportWrite(path, format);
+      if (isIOS()) {
+        // no save dialog on iOS: write to Documents, which the Files app shows
+        const path = await api.exportToDocuments(name, format);
+        msg = t("settings.exportedFiles", { name, path });
+        return;
+      }
+      const path = await pickSavePath(name, format);
+      if (!path) return;
+      if (platform.mobile) {
+        // Android: the dialog hands back a content:// URI only the WebView can write
+        await writePickedText(path, await api.exportText(format));
+      } else {
+        await api.exportWrite(path, format);
+      }
       msg = t("settings.exported", { path });
     } catch (e) {
       msg = String(e);
     }
   }
 
-  let importPath = $state<string | null>(null);
+  let importSrc = $state<{ source: ImportSource; label: string } | null>(null);
   async function doImport() {
     msg = null;
     const [path] = await pickOpenPaths({ ext: ["json"], title: t("settings.import") });
     if (!path) return;
-    importPath = path;
+    try {
+      importSrc = platform.mobile
+        ? { source: { text: await readPickedText(path) }, label: baseName(path) }
+        : { source: { path }, label: path };
+    } catch (e) { msg = String(e); }
   }
   function importClosed(r: ImportReport | null) {
-    importPath = null;
+    importSrc = null;
     if (r) msg = t("settings.imported", { s: r.sessions_added, ss: r.sessions_skipped, v: r.vocab_added });
   }
   async function rebuildThumbs() {
@@ -76,11 +93,23 @@
 
   async function doBackup() {
     msg = null;
-    const path = await pickSavePath(`chanote-backup-${stamp()}.zip`, "zip");
-    if (!path) return;
+    const name = `chanote-backup-${stamp()}.zip`;
     try {
-      const n = await api.backupZip(path);
-      msg = t("settings.backedUp", { path, n });
+      if (isIOS()) {
+        const [path, n] = await api.backupZipToDocuments(name);
+        msg = t("settings.backedUpFiles", { name, path, n });
+        return;
+      }
+      const path = await pickSavePath(name, "zip");
+      if (!path) return;
+      if (platform.mobile) {
+        const buf = await api.backupZipBytes();
+        await writePickedBytes(path, new Uint8Array(buf));
+        msg = t("settings.exported", { path });
+      } else {
+        const n = await api.backupZip(path);
+        msg = t("settings.backedUp", { path, n });
+      }
     } catch (e) {
       msg = String(e);
     }
@@ -92,9 +121,10 @@
     const [path] = await pickOpenPaths({ ext: ["zip"], title: t("settings.restore") });
     if (!path) return;
     try {
-      await api.backupRestore(path);
+      if (platform.mobile) await api.backupRestoreBytes(await readPickedBytes(path));
+      else await api.backupRestore(path);
       msg = t("settings.restored");
-      setTimeout(() => api.appRestart(), 800);
+      setTimeout(() => location.reload(), 800);
     } catch (e) {
       msg = String(e);
     } finally {
@@ -151,6 +181,7 @@
     <button class="btn" onclick={doImport}>{t("settings.import")}</button>
   </div>
   <p class="text-xs text-stone-500">{t("settings.exportHelp")}</p>
+  {#if isIOS()}<p class="text-xs text-stone-500">{t("settings.iosFilesHelp")}</p>{/if}
   <p class="text-xs text-stone-500">{t("settings.importHelp")}</p>
   <div class="flex gap-2 flex-wrap items-center pt-2 border-t border-line">
     <button class="btn" onclick={doBackup}>{t("settings.backup")}</button>
@@ -164,6 +195,7 @@
     {/if}
   </div>
   <p class="text-xs text-stone-500">{t("settings.backupHelp")}</p>
+  {#if platform.mobile}<p class="text-xs text-stone-500">{t("settings.mobileSyncHelp")}</p>{/if}
   <div class="flex gap-2 items-center pt-2 border-t border-line">
     <button class="btn" onclick={rebuildThumbs}>{t("settings.rebuildThumbs")}</button>
     <span class="text-xs text-stone-500">{t("settings.rebuildThumbsHelp")}</span>
@@ -174,10 +206,11 @@
       <span class="label">{t("settings.dbPath")}</span><span class="font-mono text-xs break-all">{info.db_path}</span>
       <span class="label">{t("settings.version")}</span><span>{info.version}</span>
       <span class="label">{t("settings.schema")}</span><span>{info.schema_version}</span>
+      <span class="label">{t("settings.platform")}</span><span>{info.platform}{info.mobile ? " (mobile)" : ""}</span>
     </div>
   {/if}
 </div>
 
-{#if importPath}
-  <ImportDialog path={importPath} onclose={importClosed} />
+{#if importSrc}
+  <ImportDialog source={importSrc.source} label={importSrc.label} onclose={importClosed} />
 {/if}

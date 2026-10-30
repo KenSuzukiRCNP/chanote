@@ -25,4 +25,14 @@ input, textarea, select { -webkit-user-select: text; user-select: text; }
 .card { @apply rounded-lg border border-line bg-white p-4; }
 .label { @apply text-xs text-stone-500 mb-0.5; }
 .field { @apply rounded-md border border-line bg-white px-2 py-1 text-sm w-full; }
+/* participant / roster line: 7 fields on one row on wide screens, two rows on phones */
+.person-row { @apply grid grid-cols-[3rem_1fr_6rem_auto] md:grid-cols-[3rem_1fr_1fr_6rem_auto_1fr_auto] gap-1 items-center mb-1; }
+}
+
+/* Phones: 16px inputs stop iOS Safari/WKWebView from zooming into fields; a little
+   more vertical room for touch. */
+@media (max-width: 767px) {
+  .field, .btn, select, input, textarea { font-size: 16px; }
+  .field { @apply py-1.5; }
+  .card { @apply p-3; }
 }

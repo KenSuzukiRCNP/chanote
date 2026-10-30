@@ -126,7 +126,7 @@
 <h1 class="text-lg font-semibold mb-3">{t("stats.title")}</h1>
 
 {#if totals}
-  <div class="flex gap-6 text-sm mb-4 text-stone-600">
+  <div class="flex gap-x-6 gap-y-1 text-sm mb-4 text-stone-600 flex-wrap">
     <span><b class="text-ink text-lg">{totals.sessions}</b> {t("stats.sessions")}</span>
     <span><b class="text-ink text-lg">{totals.temae_as_host}</b> {t("stats.asHost")}</span>
     <span><b class="text-ink text-lg">{totals.temae_as_other}</b> {t("stats.asOther")}</span>
@@ -190,6 +190,7 @@
       </tbody>
     </table>
   {/if}
+  <div class="overflow-x-auto">
   <table class="text-sm w-full max-w-4xl">
     <thead class="text-xs text-stone-500">
       <tr class="border-b border-line">
@@ -244,6 +245,7 @@
       {/each}
     </tbody>
   </table>
+  </div>
 
 {:else if tab === "interval"}
   <div class="flex gap-4 mb-2 text-sm items-center">

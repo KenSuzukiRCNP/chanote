@@ -293,5 +293,10 @@
   "home.formAny": "すべての形式",
   "home.practiceAny": "稽古+本番",
   "lists.event-kind": "会の種類",
-  "lists.eventForm": "茶事 / 茶会"
+  "lists.eventForm": "茶事 / 茶会",
+  "settings.exportedFiles": "保存しました: {name}(「ファイル」アプリ → このiPhone内 → chanote)",
+  "settings.backedUpFiles": "保存しました: {name}({n} ファイル。「ファイル」アプリ → このiPhone内 → chanote)",
+  "settings.iosFilesHelp": "iPhone / iPad では、書き出しとバックアップは「ファイル」アプリの「このiPhone内 → chanote」に保存されます。AirDrop や iCloud Drive で Mac に送り、Mac 側で「JSON を読み込む」と、重複を除いて取り込めます。",
+  "settings.mobileSyncHelp": "端末間の自動同期は次のバージョンで対応予定です。それまでは JSON の書き出し/読み込みでやり取りしてください(重複は読み込み時に検出されます)。",
+  "settings.platform": "動作環境"
 }

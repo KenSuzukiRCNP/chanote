@@ -4,9 +4,9 @@
   import { api } from "$lib/api";
   import { t } from "$lib/i18n.svelte";
   import { loadVocab } from "$lib/vocab.svelte";
-  import type { ImportPreview, ImportReport } from "$lib/types";
+  import type { ImportPreview, ImportReport, ImportSource } from "$lib/types";
 
-  let { path, onclose }: { path: string; onclose: (report: ImportReport | null) => void } = $props();
+  let { source, label, onclose }: { source: ImportSource; label: string; onclose: (report: ImportReport | null) => void } = $props();
 
   let preview = $state<ImportPreview | null>(null);
   let selfAs = $state<string>("");          // "" = file's own self
@@ -23,7 +23,7 @@
   async function load() {
     busy = true; err = null;
     try {
-      preview = await api.importPreview(path, swapped ? { self_as: selfAs, original_self_name: authorName || null } : {});
+      preview = await api.importPreview(source, swapped ? { self_as: selfAs, original_self_name: authorName || null } : {});
       checked = Object.fromEntries(preview.rows.map((r) => [r.index, r.duplicate_of == null]));
     } catch (e) { err = String(e); } finally { busy = false; }
   }
@@ -33,7 +33,7 @@
     busy = true; err = null;
     try {
       const include = Object.entries(checked).filter(([, v]) => v).map(([k]) => Number(k));
-      const rep = await api.importApply(path, { self_as: swapped ? selfAs : null, original_self_name: swapped ? authorName || null : null, include });
+      const rep = await api.importApply(source, { self_as: swapped ? selfAs : null, original_self_name: swapped ? authorName || null : null, include });
       await loadVocab();
       onclose(rep);
     } catch (e) { err = String(e); busy = false; }
@@ -42,9 +42,9 @@
 </script>
 
 <div class="fixed inset-0 bg-black/30 flex items-center justify-center z-50" role="dialog" aria-modal="true">
-  <div class="card w-[44rem] max-h-[85vh] flex flex-col gap-3">
+  <div class="card w-[44rem] max-w-[96vw] max-h-[85vh] flex flex-col gap-3">
     <div class="font-semibold">{t("import.title")}</div>
-    <div class="text-xs text-stone-500 break-all">{path}</div>
+    <div class="text-xs text-stone-500 break-all">{label}</div>
 
     {#if preview}
       <div class="grid grid-cols-[auto_1fr] gap-x-3 gap-y-2 items-center text-sm">

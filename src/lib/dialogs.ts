@@ -36,3 +36,37 @@ export async function openWithSystem(path: string) {
   const { openPath } = await import("@tauri-apps/plugin-opener");
   await openPath(path);
 }
+
+/** Read a picked file's bytes (mobile: the picker may return a content:// URI that only
+ *  the fs plugin can open; desktop paths work too). */
+export async function readPickedBytes(path: string): Promise<Uint8Array> {
+  if (!isTauri) return new Uint8Array();
+  const { readFile } = await import("@tauri-apps/plugin-fs");
+  return await readFile(path);
+}
+
+export async function readPickedText(path: string): Promise<string> {
+  if (!isTauri) return "{}";
+  const { readTextFile } = await import("@tauri-apps/plugin-fs");
+  return await readTextFile(path);
+}
+
+/** Android: save dialog returns a content:// URI; write through the fs plugin. */
+export async function writePickedBytes(path: string, bytes: Uint8Array) {
+  if (!isTauri) return;
+  const { writeFile } = await import("@tauri-apps/plugin-fs");
+  await writeFile(path, bytes);
+}
+
+export async function writePickedText(path: string, text: string) {
+  if (!isTauri) return;
+  const { writeTextFile } = await import("@tauri-apps/plugin-fs");
+  await writeTextFile(path, text);
+}
+
+/** File name from a path or content URI. */
+export function baseName(path: string): string {
+  const q = path.split(/[?#]/)[0];
+  const last = decodeURIComponent(q.split(/[\\/]/).pop() ?? "file");
+  return last.split(":").pop() || "file";
+}

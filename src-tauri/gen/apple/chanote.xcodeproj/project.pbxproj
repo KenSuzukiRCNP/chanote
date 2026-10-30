@@ -1,0 +1,482 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		2139680774E15B03A6977E02 /* assets in Resources */ = {isa = PBXBuildFile; fileRef = 5F93158AAF3E005803CD21BD /* assets */; };
+		27127856058656CFC0B4A7EE /* main.mm in Sources */ = {isa = PBXBuildFile; fileRef = 68B64FE1787A00740196ACA7 /* main.mm */; };
+		480188625A3CDB7C14247247 /* MetalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C44C56EEDC453FB40FC60B6F /* MetalKit.framework */; };
+		4FBAA51CB18CBAB301512387 /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 25193DFEE5663DC12AC0C691 /* Metal.framework */; };
+		62941F6645D10CCC0C7BBC49 /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 96F8E3293C99CB3341C8CF12 /* QuartzCore.framework */; };
+		76160ABCCD32B658BF47CAE6 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 91EBB420A59B54255C3BAB44 /* UIKit.framework */; };
+		885A6BC7A543F3E6B7C9E692 /* WebKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4FF3FAAF00A407A81EAD9DB8 /* WebKit.framework */; };
+		A37524D98493527516A55532 /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A32466C96141191E1273BE3D /* Security.framework */; };
+		BC6B3D5C983183522028E65F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 3E86D1C5798847822E1E48F2 /* Assets.xcassets */; };
+		C19EC69E79AA5A8EC1874C83 /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A4495BEE53C2C656ACA4FEAD /* CoreGraphics.framework */; };
+		D2AEA4A086E1AB7B115C1A6B /* libapp.a in Frameworks */ = {isa = PBXBuildFile; fileRef = CC17614FC4956BAC09EA8559 /* libapp.a */; };
+		F8ACFB2608B66C23BFCFAA79 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = D642ABD3F3EE3D3991280743 /* LaunchScreen.storyboard */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		25193DFEE5663DC12AC0C691 /* Metal.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Metal.framework; path = System/Library/Frameworks/Metal.framework; sourceTree = SDKROOT; };
+		3E86D1C5798847822E1E48F2 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		4FF3FAAF00A407A81EAD9DB8 /* WebKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WebKit.framework; path = System/Library/Frameworks/WebKit.framework; sourceTree = SDKROOT; };
+		5AB57E5B3624C3BCEA5DFF4E /* chanote_iOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = chanote_iOS.entitlements; sourceTree = "<group>"; };
+		5F93158AAF3E005803CD21BD /* assets */ = {isa = PBXFileReference; lastKnownFileType = folder; path = assets; sourceTree = SOURCE_ROOT; };
+		68B64FE1787A00740196ACA7 /* main.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = main.mm; sourceTree = "<group>"; };
+		6FDD0C8DB3A74C2082B8D3A4 /* profiles.rs */ = {isa = PBXFileReference; lastKnownFileType = text; path = profiles.rs; sourceTree = "<group>"; };
+		75E11D29AE2E07D6F07592D0 /* bindings.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = bindings.h; sourceTree = "<group>"; };
+		8BFF03B54AA0EA40CA94D407 /* chanote.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = chanote.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		91EBB420A59B54255C3BAB44 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
+		966E63032BC9358CD9B7E728 /* main.rs */ = {isa = PBXFileReference; lastKnownFileType = text; path = main.rs; sourceTree = "<group>"; };
+		96F8E3293C99CB3341C8CF12 /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
+		A32466C96141191E1273BE3D /* Security.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Security.framework; path = System/Library/Frameworks/Security.framework; sourceTree = SDKROOT; };
+		A4495BEE53C2C656ACA4FEAD /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = System/Library/Frameworks/CoreGraphics.framework; sourceTree = SDKROOT; };
+		C44C56EEDC453FB40FC60B6F /* MetalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MetalKit.framework; path = System/Library/Frameworks/MetalKit.framework; sourceTree = SDKROOT; };
+		C81847367DE97321512439BE /* lib.rs */ = {isa = PBXFileReference; lastKnownFileType = text; path = lib.rs; sourceTree = "<group>"; };
+		CC17614FC4956BAC09EA8559 /* libapp.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libapp.a; sourceTree = "<group>"; };
+		D642ABD3F3EE3D3991280743 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
+		E63A9B7EE399421AEE4F9A1D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		A59B42A7268524C06AC55FE5 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D2AEA4A086E1AB7B115C1A6B /* libapp.a in Frameworks */,
+				C19EC69E79AA5A8EC1874C83 /* CoreGraphics.framework in Frameworks */,
+				4FBAA51CB18CBAB301512387 /* Metal.framework in Frameworks */,
+				480188625A3CDB7C14247247 /* MetalKit.framework in Frameworks */,
+				62941F6645D10CCC0C7BBC49 /* QuartzCore.framework in Frameworks */,
+				A37524D98493527516A55532 /* Security.framework in Frameworks */,
+				76160ABCCD32B658BF47CAE6 /* UIKit.framework in Frameworks */,
+				885A6BC7A543F3E6B7C9E692 /* WebKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		0AC15BBBF3DFD42BB8FE5F66 /* Externals */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Externals;
+			sourceTree = "<group>";
+		};
+		1209CB9E646FACEC9E54EE5B /* chanote */ = {
+			isa = PBXGroup;
+			children = (
+				68B64FE1787A00740196ACA7 /* main.mm */,
+				BC97A816E59778F60CEADF07 /* bindings */,
+			);
+			path = chanote;
+			sourceTree = "<group>";
+		};
+		183701DF90F1A5D73EAD57DE = {
+			isa = PBXGroup;
+			children = (
+				5F93158AAF3E005803CD21BD /* assets */,
+				3E86D1C5798847822E1E48F2 /* Assets.xcassets */,
+				D642ABD3F3EE3D3991280743 /* LaunchScreen.storyboard */,
+				A237947C2E1AEF4F81AAB4DC /* chanote_iOS */,
+				0AC15BBBF3DFD42BB8FE5F66 /* Externals */,
+				AA2AACF17EAD943B8D39935C /* Sources */,
+				6385BE5F3239C3C0D7D38A31 /* src */,
+				9FB3C9B9CD72DF04C34E304A /* Frameworks */,
+				A0411FEFDA4F0AEC99A2F89B /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		6385BE5F3239C3C0D7D38A31 /* src */ = {
+			isa = PBXGroup;
+			children = (
+				C81847367DE97321512439BE /* lib.rs */,
+				966E63032BC9358CD9B7E728 /* main.rs */,
+				6FDD0C8DB3A74C2082B8D3A4 /* profiles.rs */,
+			);
+			name = src;
+			path = ../../src;
+			sourceTree = "<group>";
+		};
+		9FB3C9B9CD72DF04C34E304A /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				A4495BEE53C2C656ACA4FEAD /* CoreGraphics.framework */,
+				CC17614FC4956BAC09EA8559 /* libapp.a */,
+				25193DFEE5663DC12AC0C691 /* Metal.framework */,
+				C44C56EEDC453FB40FC60B6F /* MetalKit.framework */,
+				96F8E3293C99CB3341C8CF12 /* QuartzCore.framework */,
+				A32466C96141191E1273BE3D /* Security.framework */,
+				91EBB420A59B54255C3BAB44 /* UIKit.framework */,
+				4FF3FAAF00A407A81EAD9DB8 /* WebKit.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		A0411FEFDA4F0AEC99A2F89B /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				8BFF03B54AA0EA40CA94D407 /* chanote.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		A237947C2E1AEF4F81AAB4DC /* chanote_iOS */ = {
+			isa = PBXGroup;
+			children = (
+				5AB57E5B3624C3BCEA5DFF4E /* chanote_iOS.entitlements */,
+				E63A9B7EE399421AEE4F9A1D /* Info.plist */,
+			);
+			path = chanote_iOS;
+			sourceTree = "<group>";
+		};
+		AA2AACF17EAD943B8D39935C /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				1209CB9E646FACEC9E54EE5B /* chanote */,
+			);
+			path = Sources;
+			sourceTree = "<group>";
+		};
+		BC97A816E59778F60CEADF07 /* bindings */ = {
+			isa = PBXGroup;
+			children = (
+				75E11D29AE2E07D6F07592D0 /* bindings.h */,
+			);
+			path = bindings;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		0EF940D181AF6B75464B56DC /* chanote_iOS */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 21CCB8774249D75D48FE012F /* Build configuration list for PBXNativeTarget "chanote_iOS" */;
+			buildPhases = (
+				AF13936C5D7E617392AAAFD2 /* Build Rust Code */,
+				294ADFDF619E0B11B157A84F /* Sources */,
+				8C008A008AF149B43BF019B7 /* Resources */,
+				A59B42A7268524C06AC55FE5 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = chanote_iOS;
+			packageProductDependencies = (
+			);
+			productName = chanote_iOS;
+			productReference = 8BFF03B54AA0EA40CA94D407 /* chanote.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		8707DEA5FCF68925B4A84447 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+			};
+			buildConfigurationList = 453F5920439273C17AD77DB7 /* Build configuration list for PBXProject "chanote" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 183701DF90F1A5D73EAD57DE;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = A0411FEFDA4F0AEC99A2F89B /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				0EF940D181AF6B75464B56DC /* chanote_iOS */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		8C008A008AF149B43BF019B7 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				BC6B3D5C983183522028E65F /* Assets.xcassets in Resources */,
+				F8ACFB2608B66C23BFCFAA79 /* LaunchScreen.storyboard in Resources */,
+				2139680774E15B03A6977E02 /* assets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		AF13936C5D7E617392AAAFD2 /* Build Rust Code */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Build Rust Code";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(SRCROOT)/Externals/x86_64/${CONFIGURATION}/libapp.a",
+				"$(SRCROOT)/Externals/arm64/${CONFIGURATION}/libapp.a",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "export PATH=\"$HOME/.cargo/bin:/opt/homebrew/bin:/usr/local/bin:$PATH\"\n   [ -s \"$HOME/.nvm/nvm.sh\" ] && . \"$HOME/.nvm/nvm.sh\"\nnpm run -- tauri ios xcode-script -v --platform \"${PLATFORM_DISPLAY_NAME:?}\" --sdk-root \"${SDKROOT:?}\" --framework-search-paths \"${FRAMEWORK_SEARCH_PATHS:?}\" --header-search-paths \"${HEADER_SEARCH_PATHS:?}\" --gcc-preprocessor-definitions \"${GCC_PREPROCESSOR_DEFINITIONS:-}\" --configuration \"${CONFIGURATION:?}\" ${FORCE_COLOR} ${ARCHS:?}\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		294ADFDF619E0B11B157A84F /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				27127856058656CFC0B4A7EE /* main.mm in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		1DF5F66395078F01F4EB5F22 /* release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = release;
+		};
+		94B3B1C00774EB68E99A4953 /* debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = debug;
+		};
+		9FB6CB4FD3B03938D3B8775B /* debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				ARCHS = arm64;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = chanote_iOS/chanote_iOS.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEVELOPMENT_TEAM = MP7WQJ8US4;
+				ENABLE_BITCODE = NO;
+				"EXCLUDED_ARCHS[sdk=iphoneos*]" = x86_64;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"\".\"",
+				);
+				INFOPLIST_FILE = chanote_iOS/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				"LIBRARY_SEARCH_PATHS[arch=arm64]" = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/Externals/arm64/$(CONFIGURATION)",
+					"$(SDKROOT)/usr/lib/swift",
+					"$(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/$(PLATFORM_NAME)",
+					"$(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift-5.0/$(PLATFORM_NAME)",
+				);
+				"LIBRARY_SEARCH_PATHS[arch=x86_64]" = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/Externals/x86_64/$(CONFIGURATION)",
+					"$(SDKROOT)/usr/lib/swift",
+					"$(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/$(PLATFORM_NAME)",
+					"$(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift-5.0/$(PLATFORM_NAME)",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = jp.chanote.app;
+				PRODUCT_NAME = "chanote";
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALID_ARCHS = arm64;
+			};
+			name = debug;
+		};
+		F7096EDEEF407CEE28FAA1DB /* release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				ARCHS = arm64;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = chanote_iOS/chanote_iOS.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEVELOPMENT_TEAM = MP7WQJ8US4;
+				ENABLE_BITCODE = NO;
+				"EXCLUDED_ARCHS[sdk=iphoneos*]" = x86_64;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"\".\"",
+				);
+				INFOPLIST_FILE = chanote_iOS/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				"LIBRARY_SEARCH_PATHS[arch=arm64]" = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/Externals/arm64/$(CONFIGURATION)",
+					"$(SDKROOT)/usr/lib/swift",
+					"$(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/$(PLATFORM_NAME)",
+					"$(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift-5.0/$(PLATFORM_NAME)",
+				);
+				"LIBRARY_SEARCH_PATHS[arch=x86_64]" = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/Externals/x86_64/$(CONFIGURATION)",
+					"$(SDKROOT)/usr/lib/swift",
+					"$(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/$(PLATFORM_NAME)",
+					"$(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift-5.0/$(PLATFORM_NAME)",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = jp.chanote.app;
+				PRODUCT_NAME = "chanote";
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALID_ARCHS = arm64;
+			};
+			name = release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		21CCB8774249D75D48FE012F /* Build configuration list for PBXNativeTarget "chanote_iOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9FB6CB4FD3B03938D3B8775B /* debug */,
+				F7096EDEEF407CEE28FAA1DB /* release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = debug;
+		};
+		453F5920439273C17AD77DB7 /* Build configuration list for PBXProject "chanote" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				94B3B1C00774EB68E99A4953 /* debug */,
+				1DF5F66395078F01F4EB5F22 /* release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 8707DEA5FCF68925B4A84447 /* Project object */;
+}

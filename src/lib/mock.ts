@@ -51,7 +51,8 @@ export async function invoke<T>(cmd: string, args: Record<string, unknown> = {})
   await new Promise((r) => setTimeout(r, 10));
   switch (cmd) {
     case "app_info":
-      return { version: "0.4.0-mock", db_path: "(in-memory mock)", schema_version: 4, self_person_id: "person.self", profile: profiles.current } as T;
+      return { version: "0.5.0-mock", db_path: "(in-memory mock)", schema_version: 4, self_person_id: "person.self", profile: profiles.current,
+               platform: new URLSearchParams(location.search).get("platform") ?? "macos", mobile: new URLSearchParams(location.search).has("mobile"), exports_dir: "" } as T;
     case "profile_list":
       return structuredClone(profiles) as T;
     case "profile_create": {
@@ -225,6 +226,21 @@ export async function invoke<T>(cmd: string, args: Record<string, unknown> = {})
       return 0 as T;
     case "import_read":
       return { vocab_added: 0, vocab_skipped: 12, sessions_added: 0, sessions_skipped: 3 } as T;
+    case "export_text":
+      return JSON.stringify({ app: "chanote", schema_version: 3, vocab, sessions: [...sessions.values()] }) as T;
+    case "export_to_documents":
+      return `/mock/Documents/${args.name}` as T;
+    case "backup_zip_to_documents":
+      return [`/mock/Documents/${args.name}`, 3] as T;
+    case "backup_zip_bytes":
+      return new ArrayBuffer(0) as T;
+    case "backup_restore_bytes":
+      return 3 as T;
+    case "attachment_add_bytes": {
+      const a = { id: nextAtt++, session_id: Number((args.headers as Record<string, string>)["x-session-id"]), temae_id: null, path: `attachments/2026/att-${nextAtt}.jpg`, caption: null, created_at: new Date().toISOString() };
+      attachments.push(a);
+      return a as T;
+    }
     case "import_preview":
       return {
         persons: vocab.filter((v) => v.kind === "person").map((v) => ({ id: v.id, name: v.ja, is_self: !!(v.meta as { is_self?: boolean } | null)?.is_self, n: 5 })),

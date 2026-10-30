@@ -209,7 +209,7 @@
 <div class="max-w-3xl flex flex-col gap-4">
   {#if info}<div class="text-sm text-matcha-deep">{info}</div>{/if}
   <div class="card flex flex-col gap-3">
-    <div class="grid grid-cols-[auto_1fr_auto_1fr] gap-x-4 gap-y-2 items-center">
+    <div class="grid grid-cols-[auto_1fr] md:grid-cols-[auto_1fr_auto_1fr] gap-x-4 gap-y-2 items-center">
       <span class="label">{t("session.date")}</span>
       <span class="flex gap-2">
         <input type="date" class="field" bind:value={s.date} disabled={s.date_prec === "unknown"} />
@@ -218,7 +218,7 @@
         </select>
       </span>
       <span class="label" title={t("session.formHelp")}>{t("session.form")}</span>
-      <span class="flex gap-2 items-center">
+      <span class="flex gap-2 items-center flex-wrap">
         <select class="field w-auto" value={s.form} onchange={(e) => setForm(e.currentTarget.value as Session["form"])} title={t("session.formHelp")}>
           {#each SESSION_FORMS as f}<option value={f}>{t("session.form." + f)}</option>{/each}
         </select>
@@ -264,32 +264,33 @@
       </span>
 
       <span class="label">{t("session.note")}</span>
-      <textarea class="field col-span-3 resize-y" rows="2" bind:value={s.note}></textarea>
+      <textarea class="field md:col-span-3 resize-y" rows="2" bind:value={s.note}></textarea>
     </div>
 
     {#if showRoster}
       <div class="pt-2 border-t border-line">
         <div class="flex items-center gap-3 mb-1">
-          <span class="label mb-0">{t("session.roster")}</span>
-          <span class="text-[11px] text-stone-400">{t("session.rosterHelp")}</span>
+          <span class="label mb-0 whitespace-nowrap">{t("session.roster")}</span>
+          <span class="text-[11px] text-stone-400 hidden md:inline">{t("session.rosterHelp")}</span>
           <span class="grow"></span>
           <button class="btn py-0.5 text-xs" onclick={addRosterPerson}>＋ {t("session.addPerson")}</button>
         </div>
+        <p class="text-[11px] text-stone-400 mb-1 md:hidden">{t("session.rosterHelp")}</p>
         {#each s.persons as p, i (i)}
           {#if p.role !== "teacher"}
-            <div class="grid grid-cols-[3rem_1fr_1fr_6rem_auto_1fr_auto] gap-1 items-center mb-1">
-              <input type="number" min="1" class="field py-0.5" placeholder="#" bind:value={p.seat} disabled={p.role !== "guest"} title={t("temae.seat")} />
-              <select class="field py-0.5" bind:value={p.person_id}>
+            <div class="person-row">
+              <input type="number" min="1" class="field py-0.5 order-1 md:order-none" placeholder="#" bind:value={p.seat} disabled={p.role !== "guest"} title={t("temae.seat")} />
+              <select class="field py-0.5 order-2 md:order-none" bind:value={p.person_id}>
                 <option value={null}>—</option>
                 {#each others as v}<option value={v.id}>{term(v)}</option>{/each}
               </select>
-              <input class="field py-0.5" placeholder={t("temae.nameFree")} bind:value={p.name_free} />
-              <select class="field py-0.5" value={p.role} onchange={(e) => setRosterRole(p, e.currentTarget.value as SessionRole)}>
+              <input class="field py-0.5 order-5 md:order-none col-span-2 md:col-span-1" placeholder={t("temae.nameFree")} bind:value={p.name_free} />
+              <select class="field py-0.5 order-3 md:order-none" value={p.role} onchange={(e) => setRosterRole(p, e.currentTarget.value as SessionRole)}>
                 {#each ROSTER_ROLES as r}<option value={r}>{t("role." + r)}</option>{/each}
               </select>
-              <label class="text-xs flex items-center gap-1 whitespace-nowrap"><input type="checkbox" bind:checked={p.is_last} disabled={p.role !== "guest"} />{t("temae.isLast")}</label>
-              <input class="field py-0.5" placeholder={t("temae.roleNote")} bind:value={p.role_note} />
-              <span class="flex gap-0.5 text-stone-400">
+              <label class="text-xs flex items-center gap-1 whitespace-nowrap order-4 md:order-none"><input type="checkbox" bind:checked={p.is_last} disabled={p.role !== "guest"} />{t("temae.isLast")}</label>
+              <input class="field py-0.5 order-6 md:order-none" placeholder={t("temae.roleNote")} bind:value={p.role_note} />
+              <span class="flex gap-0.5 text-stone-400 order-7 md:order-none">
                 <button class="px-1 hover:text-ink" onclick={() => moveRoster(p, -1)} title="↑">↑</button>
                 <button class="px-1 hover:text-ink" onclick={() => moveRoster(p, 1)} title="↓">↓</button>
                 <button class="px-1 hover:text-red-600" onclick={() => s.persons.splice(i, 1)}>×</button>
@@ -303,13 +304,13 @@
 
   {#each s.temae as tm, i (i)}
     <div class="card flex flex-col gap-2">
-      <div class="grid grid-cols-[1fr_1fr_auto_auto] gap-2 items-end">
-        <label>
+      <div class="grid grid-cols-[1fr_auto] md:grid-cols-[1fr_1fr_auto_auto] gap-2 items-end">
+        <label class="col-span-2 md:col-span-1">
           <div class="label">{t("temae.temae")}</div>
           <TemaePicker value={tm.temae_alias_id ?? tm.temae_id ? "temae:" + (tm.temae_alias_id ?? tm.temae_id) : ""}
                        onchange={(v) => pickTemae(tm, v.replace(/^temae:/, ""))} />
         </label>
-        <label>
+        <label class="col-span-2 md:col-span-1">
           <div class="label">{t("temae.host")}</div>
           <select class="field" value={tm.host_id ?? ""} onchange={(e) => setHost(tm, e.currentTarget.value)}>
             <option value="">—</option>
@@ -327,7 +328,7 @@
       </div>
 
       {#if open[i]}
-        <div class="grid grid-cols-4 gap-2 pt-2 border-t border-line">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-2 pt-2 border-t border-line">
           <label><div class="label">{t("temae.hearth")}</div>
             <select class="field" bind:value={tm.hearth}>
               <option value={null}>—</option>
@@ -370,7 +371,7 @@
             <input type="time" class="field" bind:value={tm.time} /></label>
           <label class="col-span-2"><div class="label">{t("temae.myRole")} memo</div>
             <input class="field" bind:value={tm.my_role_note} placeholder="月 / 花 / 香 …" /></label>
-          <label class="col-span-4"><div class="label">{t("temae.note")}</div>
+          <label class="col-span-2 md:col-span-4"><div class="label">{t("temae.note")}</div>
             <textarea class="field min-h-16 resize-y" rows="3" bind:value={tm.note} placeholder={t("temae.notePlaceholder")}></textarea></label>
           <TemaeExtras temae={tm} isKagetsu={isKagetsu(tm)} {inherited} />
         </div>

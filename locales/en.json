@@ -293,5 +293,10 @@
   "home.formAny": "Any form",
   "home.practiceAny": "Lessons + real",
   "lists.event-kind": "Event kinds",
-  "lists.eventForm": "Chaji / chakai"
+  "lists.eventForm": "Chaji / chakai",
+  "settings.exportedFiles": "Saved: {name} (Files app → On My iPhone → chanote)",
+  "settings.backedUpFiles": "Saved: {name} ({n} files; Files app → On My iPhone → chanote)",
+  "settings.iosFilesHelp": "On iPhone / iPad, exports and backups go to the Files app under On My iPhone → chanote. Send them to your Mac with AirDrop or iCloud Drive and use Import JSON there; duplicates are skipped.",
+  "settings.mobileSyncHelp": "Automatic sync between devices is planned for the next version. Until then, exchange JSON exports (duplicates are detected on import).",
+  "settings.platform": "Platform"
 }

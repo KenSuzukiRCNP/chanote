@@ -21,7 +21,7 @@
 # Ids are stable identifiers, never shown to users. Do not rename; archive instead.
 
 id: urasenke
-version: "2026.10.1"
+version: "2026.10.2"
 name: { ja: 裏千家, romaji: Urasenke, en: Urasenke school }
 
 categories:
@@ -183,6 +183,12 @@ temae:
     en: Second charcoal
     category: sumi
     defaults: { tea: "-" }
+  - id: haigata
+    ja: 灰形
+    romaji: haigata
+    en: Shaping the ash bed of the brazier (furo)
+    category: sumi
+    defaults: { tea: "-", hearth: furo, tana: "-" }
 
   # ---- 応用・他 -----------------------------------------------------------
   - id: tsutsu-chawan

@@ -4,21 +4,25 @@
 
 import type {
   AppInfo, Attachment, AxisValues, ByRow, CoverageRow, CrossCell, EventRow, ImportOptions, ImportPreview,
-  ImportReport, MonthlyRow, Profile, ProfileInfo, RankRow, ResolvedTemae, Session,
+  ImportReport, ImportSource, MonthlyRow, Profile, ProfileInfo, RankRow, ResolvedTemae, Session,
   SessionFilter, SessionSummary, StatsFilter, StatsTotals, Vocab,
 } from "./types";
 
 type Invoke = <T>(cmd: string, args?: Record<string, unknown>) => Promise<T>;
 
 let invoke: Invoke;
+let invokeRaw: <T>(cmd: string, body: Uint8Array, headers: Record<string, string>) => Promise<T>;
 const isTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 
 if (isTauri) {
   const core = await import("@tauri-apps/api/core");
   invoke = core.invoke as Invoke;
+  // binary body (photos, backup zips) instead of a JSON byte array
+  invokeRaw = (cmd, body, headers) => core.invoke(cmd, body, { headers });
 } else {
   const mock = await import("./mock");
   invoke = mock.invoke as Invoke;
+  invokeRaw = (cmd, body, headers) => mock.invoke(cmd, { body, headers });
 }
 
 export const api = {
@@ -56,9 +60,18 @@ export const api = {
   backupZip: (path: string) => invoke<number>("backup_zip", { path }),
   backupRestore: (path: string) => invoke<number>("backup_restore", { path }),
   appRestart: () => invoke<void>("app_restart"),
-  importRead: (path: string) => invoke<ImportReport>("import_read", { path }),
-  importPreview: (path: string, options: ImportOptions) => invoke<ImportPreview>("import_preview", { path, options }),
-  importApply: (path: string, options: ImportOptions) => invoke<ImportReport>("import_apply", { path, options }),
+  importRead: (source: ImportSource) => invoke<ImportReport>("import_read", { source }),
+  importPreview: (source: ImportSource, options: ImportOptions) => invoke<ImportPreview>("import_preview", { source, options }),
+  importApply: (source: ImportSource, options: ImportOptions) => invoke<ImportReport>("import_apply", { source, options }),
+  // mobile file flows
+  exportText: (format: "json" | "csv") => invoke<string>("export_text", { format }),
+  exportToDocuments: (name: string, format: "json" | "csv") => invoke<string>("export_to_documents", { name, format }),
+  backupZipToDocuments: (name: string) => invoke<[string, number]>("backup_zip_to_documents", { name }),
+  backupZipBytes: () => invoke<ArrayBuffer>("backup_zip_bytes"),
+  backupRestoreBytes: (bytes: Uint8Array) =>
+    invokeRaw<number>("backup_restore_bytes", bytes, {}),
+  attachmentAddBytes: (sessionId: number, name: string, bytes: Uint8Array) =>
+    invokeRaw<Attachment>("attachment_add_bytes", bytes, { "x-session-id": String(sessionId), "x-file-name": encodeURIComponent(name) }),
 
   statsMonthly: (filter: StatsFilter = {}) => invoke<MonthlyRow[]>("stats_monthly", { filter }),
   statsCross: (rowAxis: string, colAxis: string, hostOnly: boolean, filter: StatsFilter = {}) =>

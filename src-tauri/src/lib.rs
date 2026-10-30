@@ -53,16 +53,40 @@ struct AppInfo {
     schema_version: i64,
     self_person_id: String,
     profile: String,
+    /// "macos" | "windows" | "linux" | "ios" | "android"
+    platform: String,
+    mobile: bool,
+    /// Where exports and backups are written on mobile (the app's Documents folder,
+    /// visible in the Files app on iOS). Empty on desktop (save dialog instead).
+    exports_dir: String,
+}
+
+const MOBILE: bool = cfg!(any(target_os = "ios", target_os = "android"));
+
+/// Folder for files the user wants to get out of the app on mobile.
+fn exports_dir(app: &tauri::AppHandle) -> Option<PathBuf> {
+    if !MOBILE {
+        return None;
+    }
+    // iOS: <app>/Documents, exposed in Files via UIFileSharingEnabled (Info.ios.plist).
+    // Android: the app's own files dir; the share/save dialog copies from there.
+    let dir = app.path().document_dir().ok().or_else(|| app.path().app_data_dir().ok())?;
+    let dir = if cfg!(target_os = "android") { dir.join("exports") } else { dir };
+    std::fs::create_dir_all(&dir).ok()?;
+    Some(dir)
 }
 
 #[tauri::command]
-fn app_info(state: State<AppState>) -> CmdResult<AppInfo> {
+fn app_info(app: tauri::AppHandle, state: State<AppState>) -> CmdResult<AppInfo> {
     Ok(AppInfo {
         version: env!("CARGO_PKG_VERSION").into(),
         db_path: state.o().db_path.display().to_string(),
         profile: state.o().profile.clone(),
         schema_version: state.o().db.schema_version().map_err(e)?,
         self_person_id: state.o().db.self_person_id().map_err(e)?,
+        platform: std::env::consts::OS.into(),
+        mobile: MOBILE,
+        exports_dir: exports_dir(&app).map(|d| d.display().to_string()).unwrap_or_default(),
     })
 }
 
@@ -211,6 +235,46 @@ fn attachment_add(state: State<AppState>, session_id: i64, paths: Vec<String>) -
     Ok(out)
 }
 
+/// Mobile variant: the picked file arrives as the raw request body (the WebView read
+/// it through the fs plugin), with the session id and file name in headers.
+#[tauri::command]
+fn attachment_add_bytes(state: State<AppState>, request: tauri::ipc::Request<'_>) -> CmdResult<Attachment> {
+    let tauri::ipc::InvokeBody::Raw(bytes) = request.body() else {
+        return Err("expected a binary body".into());
+    };
+    let header = |k: &str| request.headers().get(k).and_then(|v| v.to_str().ok()).map(|v| v.to_string());
+    let session_id: i64 = header("x-session-id").and_then(|v| v.parse().ok()).ok_or("missing x-session-id")?;
+    let name = header("x-file-name").unwrap_or_else(|| "photo.jpg".into());
+    let name = percent_decode(&name);
+    let o = state.o();
+    let tmp = o.data_dir.join(".tmp");
+    std::fs::create_dir_all(&tmp).map_err(e)?;
+    let path = tmp.join(format!("in-{}-{}", std::process::id(), name.replace(['/', '\\'], "_")));
+    std::fs::write(&path, bytes).map_err(e)?;
+    let res = o.db.attachment_add(&o.data_dir, session_id, &path).map_err(e);
+    let _ = std::fs::remove_file(&path);
+    res
+}
+
+/// Minimal percent-decoding for header values (file names with non-ASCII characters).
+fn percent_decode(s: &str) -> String {
+    let b = s.as_bytes();
+    let mut out = Vec::with_capacity(b.len());
+    let mut i = 0;
+    while i < b.len() {
+        if b[i] == b'%' && i + 2 < b.len() {
+            if let Ok(v) = u8::from_str_radix(&s[i + 1..i + 3], 16) {
+                out.push(v);
+                i += 3;
+                continue;
+            }
+        }
+        out.push(b[i]);
+        i += 1;
+    }
+    String::from_utf8_lossy(&out).into_owned()
+}
+
 #[tauri::command]
 fn attachment_list(state: State<AppState>, session_id: i64) -> CmdResult<Vec<Attachment>> {
     state.o().db.attachment_list(session_id).map_err(e)
@@ -271,23 +335,61 @@ fn export_write(state: State<AppState>, path: String, format: String) -> CmdResu
     Ok(body.len())
 }
 
-/// Import a chanote JSON export from `path` (no options: skip duplicates).
+/// Export as text (mobile: the WebView writes it where the OS lets it, e.g. through
+/// the Android save dialog).
 #[tauri::command]
-fn import_read(state: State<AppState>, path: String) -> CmdResult<ImportReport> {
-    let json = std::fs::read_to_string(&path).map_err(e)?;
-    state.o().db.import_json(&json).map_err(e)
+fn export_text(state: State<AppState>, format: String) -> CmdResult<String> {
+    match format.as_str() {
+        "json" => state.o().db.export_json().map_err(e),
+        "csv" => Ok(format!("\u{feff}{}", state.o().db.export_csv().map_err(e)?)),
+        other => Err(format!("unknown export format {other}")),
+    }
+}
+
+/// Mobile: write an export into the exports folder (iOS: Documents → Files app).
+/// Returns the full path.
+#[tauri::command]
+fn export_to_documents(app: tauri::AppHandle, state: State<AppState>, name: String, format: String) -> CmdResult<String> {
+    let dir = exports_dir(&app).ok_or("no exports folder on this platform")?;
+    let path = dir.join(name);
+    export_write(state, path.display().to_string(), format)?;
+    Ok(path.display().to_string())
+}
+
+/// Source of an import: a file path (desktop) or the JSON text itself (mobile, read by
+/// the WebView through the fs plugin).
+#[derive(Deserialize)]
+struct ImportSource {
+    #[serde(default)]
+    path: Option<String>,
+    #[serde(default)]
+    text: Option<String>,
+}
+
+impl ImportSource {
+    fn json(&self) -> CmdResult<String> {
+        if let Some(t) = &self.text {
+            return Ok(t.clone());
+        }
+        let p = self.path.as_ref().ok_or("import source has neither path nor text")?;
+        std::fs::read_to_string(p).map_err(e)
+    }
+}
+
+/// Import a chanote JSON export (no options: skip duplicates).
+#[tauri::command]
+fn import_read(state: State<AppState>, source: ImportSource) -> CmdResult<ImportReport> {
+    state.o().db.import_json(&source.json()?).map_err(e)
 }
 
 #[tauri::command]
-fn import_preview(state: State<AppState>, path: String, options: ImportOptions) -> CmdResult<ImportPreview> {
-    let json = std::fs::read_to_string(&path).map_err(e)?;
-    state.o().db.import_preview(&json, &options).map_err(e)
+fn import_preview(state: State<AppState>, source: ImportSource, options: ImportOptions) -> CmdResult<ImportPreview> {
+    state.o().db.import_preview(&source.json()?, &options).map_err(e)
 }
 
 #[tauri::command]
-fn import_apply(state: State<AppState>, path: String, options: ImportOptions) -> CmdResult<ImportReport> {
-    let json = std::fs::read_to_string(&path).map_err(e)?;
-    state.o().db.import_json_with(&json, &options).map_err(e)
+fn import_apply(state: State<AppState>, source: ImportSource, options: ImportOptions) -> CmdResult<ImportReport> {
+    state.o().db.import_json_with(&source.json()?, &options).map_err(e)
 }
 
 /// Full backup (database + photos) as a zip.
@@ -296,14 +398,77 @@ fn backup_zip(state: State<AppState>, path: String) -> CmdResult<usize> {
     state.o().db.backup_zip(&state.o().data_dir, std::path::Path::new(&path)).map_err(e)
 }
 
+/// Mobile: backup zip into the exports folder. Returns (path, file count).
+#[tauri::command]
+fn backup_zip_to_documents(app: tauri::AppHandle, state: State<AppState>, name: String) -> CmdResult<(String, usize)> {
+    let dir = exports_dir(&app).ok_or("no exports folder on this platform")?;
+    let path = dir.join(name);
+    let n = state.o().db.backup_zip(&state.o().data_dir, &path).map_err(e)?;
+    Ok((path.display().to_string(), n))
+}
+
+/// Mobile: the backup zip as raw bytes (Android writes it through the save dialog).
+#[tauri::command]
+fn backup_zip_bytes(state: State<AppState>) -> CmdResult<tauri::ipc::Response> {
+    let o = state.o();
+    let tmp = o.data_dir.join(".tmp");
+    std::fs::create_dir_all(&tmp).map_err(e)?;
+    let path = tmp.join(format!("backup-{}.zip", std::process::id()));
+    o.db.backup_zip(&o.data_dir, &path).map_err(e)?;
+    let bytes = std::fs::read(&path).map_err(e)?;
+    let _ = std::fs::remove_file(&path);
+    Ok(tauri::ipc::Response::new(bytes))
+}
+
+/// Mobile: restore from a zip delivered as the raw request body.
+#[tauri::command]
+fn backup_restore_bytes(state: State<AppState>, request: tauri::ipc::Request<'_>) -> CmdResult<usize> {
+    let tauri::ipc::InvokeBody::Raw(bytes) = request.body() else {
+        return Err("expected a binary body".into());
+    };
+    let path = {
+        let o = state.o();
+        let tmp = o.data_dir.join(".tmp");
+        std::fs::create_dir_all(&tmp).map_err(e)?;
+        let path = tmp.join(format!("restore-{}.zip", std::process::id()));
+        std::fs::write(&path, bytes).map_err(e)?;
+        path
+    };
+    let res = backup_restore(state, path.display().to_string());
+    let _ = std::fs::remove_file(&path);
+    res
+}
+
 /// Restore from a backup zip. The current database is renamed to
-/// `chanote.sqlite.before-restore`; the app must be restarted afterwards (the caller
-/// calls `app_restart`).
+/// `chanote.sqlite.before-restore` and the profile is reopened in place (no process
+/// restart — iOS cannot relaunch an app); the frontend reloads afterwards.
 #[tauri::command]
 fn backup_restore(state: State<AppState>, path: String) -> CmdResult<usize> {
-    // checkpoint and release the WAL before files are swapped underneath us
-    let _ = state.o().db.conn().execute_batch("PRAGMA wal_checkpoint(TRUNCATE);");
-    chanote_core::backup::restore_zip(&state.o().data_dir, std::path::Path::new(&path)).map_err(e)
+    let (profile, data_dir) = {
+        let o = state.o();
+        // checkpoint and release the WAL before files are swapped underneath us
+        let _ = o.db.conn().execute_batch("PRAGMA wal_checkpoint(TRUNCATE);");
+        (o.profile.clone(), o.data_dir.clone())
+    };
+    // close the live connection while the files are replaced
+    let placeholder = Open {
+        profile: profile.clone(),
+        db: Db::open_in_memory().map_err(e)?,
+        db_path: PathBuf::new(),
+        data_dir: data_dir.clone(),
+    };
+    let old = {
+        let mut guard = state.open.write().map_err(|_| "state lock poisoned".to_string())?;
+        std::mem::replace(&mut *guard, placeholder)
+    };
+    drop(old);
+    let n = chanote_core::backup::restore_zip(&data_dir, std::path::Path::new(&path)).map_err(e);
+    let reopened = open_profile(&state.root, &profile).map_err(e)?;
+    {
+        let mut guard = state.open.write().map_err(|_| "state lock poisoned".to_string())?;
+        *guard = reopened;
+    }
+    n
 }
 
 #[tauri::command]
@@ -406,6 +571,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_fs::init())
         .setup(|app| {
             let root = app.path().app_data_dir()?;
             std::fs::create_dir_all(&root)?;
@@ -445,14 +611,20 @@ pub fn run() {
             profile_set_ask,
             profile_switch,
             export_write,
+            export_text,
+            export_to_documents,
             import_read,
             import_preview,
             import_apply,
             backup_write,
             backup_zip,
+            backup_zip_to_documents,
+            backup_zip_bytes,
             backup_restore,
+            backup_restore_bytes,
             app_restart,
             attachment_add,
+            attachment_add_bytes,
             attachment_list,
             attachment_thumb,
             attachment_caption,

@@ -67,6 +67,12 @@ CSV(1行=1点前、Excel や pandas 向け)に書き出し、写真込みの zip
 他流派を正しく書けるほどには知りません。ご存じの方の **ご協力を歓迎します** ──
 書き方は [docs/school-packs.md](docs/school-packs.md) を。数百行のテキストで、プログラミングは不要です。
 
+<p align="center">
+  <img src="docs/screenshots/mobile-home.png" width="24%" alt="スマートフォンでの記録">
+  <img src="docs/screenshots/mobile-editor.png" width="24%" alt="スマートフォンでの茶事の編集">
+  <img src="docs/screenshots/mobile-stats.png" width="24%" alt="スマートフォンでの会の統計">
+</p>
+
 ## インストール
 
 **[Releases](../../releases)** から最新版をダウンロードしてください。
@@ -77,6 +83,14 @@ CSV(1行=1点前、Excel や pandas 向け)に書き出し、写真込みの zip
   `xattr -cr /Applications/chanote.app` を一度実行してください。
 - **Windows**: `.exe` インストーラを実行。
 - **Linux**: `.AppImage` または `.deb`。
+- **Android**: `.apk` をインストール(「提供元不明のアプリ」の許可を求められます)。
+- **iPhone / iPad**: iOS 版はありますが、まだ配布していません。Apple は App Store 経由でしか
+  配布を認めておらず、ご要望があれば App Store での公開を検討します。Xcode の入った Mac を
+  お持ちなら、ご自身の端末には入れられます ── [CONTRIBUTING.md](CONTRIBUTING.md) を参照。
+
+スマートフォンでは、書き出しとバックアップは「ファイル」アプリ(このiPhone内 → chanote)または
+Android の保存ダイアログに保存されます。パソコンに移して「JSON を読み込む」で取り込んでください。
+端末間の自動同期は次のバージョンで対応予定です。
 
 まずデータ入りで試したい方は、設定 → 「JSON を読み込む」で
 [`samples/sample-data.json`](samples/sample-data.json)(架空の2年分)を読み込んでください。

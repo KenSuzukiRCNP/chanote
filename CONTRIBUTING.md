@@ -31,6 +31,34 @@ npm run check                # svelte-check / TypeScript
 
 Development database override: `CHANOTE_DB=/path/to/file.sqlite npm run tauri dev`.
 
+### Mobile (iOS / Android)
+
+The same code builds for phones with Tauri's mobile targets. The layout switches to a
+single column with bottom tabs below 768 px; file flows use the system pickers and, on
+iOS, the app's Documents folder (visible in the Files app) instead of save dialogs.
+
+```sh
+# iOS — macOS with Xcode; without an Apple Developer Program membership the app can be
+# installed on your own device only (Personal Team signing in Xcode, re-sign every 7 days)
+rustup target add aarch64-apple-ios aarch64-apple-ios-sim
+npm run tauri ios init             # once; creates src-tauri/gen/apple (commit it)
+npm run tauri ios dev -- --open       # opens Xcode: set Signing → Team, pick your iPhone, Run
+
+# Android — Android Studio (SDK, NDK, JDK 17) with ANDROID_HOME / NDK_HOME set
+rustup target add aarch64-linux-android armv7-linux-androideabi i686-linux-android x86_64-linux-android
+npm run tauri android init
+npm run tauri android dev                       # emulator or USB device
+npm run tauri android build -- --apk --debug    # installable debug-signed APK
+```
+
+`src-tauri/Info.ios.plist` is merged into the generated iOS Info.plist. The release
+workflow builds an Android APK (release-signed when the `ANDROID_KEYSTORE_B64`,
+`ANDROID_KEY_ALIAS` and `ANDROID_KEY_PASSWORD` secrets exist, debug-signed otherwise;
+`scripts/android-signing.py` wires the keystore into the generated Gradle file).
+
+Browser mock of the phone layout: `npm run dev`, then open
+`http://localhost:1420/?mobile&platform=ios` in a narrow window.
+
 ## Layout
 
 ```

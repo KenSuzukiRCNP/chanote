@@ -130,7 +130,13 @@ export interface AppInfo {
   schema_version: number;
   self_person_id: string;
   profile: string;
+  platform: string;
+  mobile: boolean;
+  exports_dir: string;
 }
+
+/** What an import reads from: a file path (desktop) or the JSON text (mobile). */
+export interface ImportSource { path?: string; text?: string }
 
 export interface Profile { id: string; name: string }
 export interface ProfileInfo { profiles: Profile[]; current: string; ask_on_start: boolean }

@@ -164,7 +164,7 @@
 </script>
 
 <h1 class="text-lg font-semibold mb-4">{t("lists.title")}</h1>
-<div class="flex gap-1 mb-4 items-center">
+<div class="flex gap-1 mb-4 items-center flex-wrap">
   {#each kinds as k}
     <button class="btn" class:bg-stone-200={kind === k} onclick={() => { kind = k; editing = null; }}>{t("lists." + k)}</button>
   {/each}
@@ -175,7 +175,7 @@
 {#if kind === "temae"}
   <TemaeListEditor {showArchived} />
 {:else}
-  <div class="card max-w-3xl flex gap-2 items-end mb-4">
+  <div class="card max-w-3xl flex gap-2 items-end mb-4 flex-wrap">
     <label class="grow"><div class="label">{t("lists.nameJa")}</div><input class="field" bind:value={newJa} onkeydown={(e) => e.key === "Enter" && add()} /></label>
     <label class="grow"><div class="label">{t("lists.nameLatin")}</div><input class="field" bind:value={newRomaji} onkeydown={(e) => e.key === "Enter" && add()} /></label>
     {#if kind === "person"}

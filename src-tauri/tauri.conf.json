@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "chanote",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "identifier": "jp.chanote.app",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -45,6 +45,12 @@
     },
     "category": "Lifestyle",
     "shortDescription": "Tea ceremony practice log",
-    "longDescription": "chanote records your tea ceremony (chado) practice sessions: temae, roles, shelves, participants, photos, with statistics and export."
+    "longDescription": "chanote records your tea ceremony (chado) practice sessions: temae, roles, shelves, participants, photos, with statistics and export.",
+    "iOS": {
+      "minimumSystemVersion": "15.0"
+    },
+    "android": {
+      "minSdkVersion": 24
+    }
   }
 }

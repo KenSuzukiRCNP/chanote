@@ -75,6 +75,12 @@ other traditions well enough to write those files alone. If you do, **help is ve
 welcome** — see [docs/school-packs.md](docs/school-packs.md) for the format; a pack is a
 few hundred lines of plain text and needs no programming.
 
+<p align="center">
+  <img src="docs/screenshots/mobile-home.png" width="24%" alt="Records on a phone">
+  <img src="docs/screenshots/mobile-editor.png" width="24%" alt="Editing a chaji on a phone">
+  <img src="docs/screenshots/mobile-stats.png" width="24%" alt="Event statistics on a phone">
+</p>
+
 ## Install
 
 Download the latest release from the **[Releases](../../releases)** page.
@@ -85,6 +91,15 @@ Download the latest release from the **[Releases](../../releases)** page.
   the app is damaged, run `xattr -cr /Applications/chanote.app` once in Terminal.
 - **Windows**: run the `.exe` installer.
 - **Linux**: use the `.AppImage` or the `.deb`.
+- **Android**: install the `.apk` (allow installs from unknown sources when asked).
+- **iPhone / iPad**: the iOS version exists but is not distributed yet — Apple only
+  allows that through the App Store, which the author is considering if there is
+  interest. If you have a Mac with Xcode you can install it on your own device; see
+  [CONTRIBUTING.md](CONTRIBUTING.md).
+
+On a phone, exports and backups go to the Files app (On My iPhone → chanote) or the
+Android save dialog; move them to your computer and use *Import JSON* there. Automatic
+sync between devices is planned for the next version.
 
 Want to try it with data first? Settings → *Import JSON* → pick
 [`samples/sample-data.json`](samples/sample-data.json) (two fictional years of practice).

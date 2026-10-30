@@ -3,7 +3,8 @@
   // clicking opens the original in the system viewer.
   import { onMount, onDestroy } from "svelte";
   import { api, isTauri } from "$lib/api";
-  import { pickOpenPaths, openWithSystem } from "$lib/dialogs";
+  import { pickOpenPaths, openWithSystem, readPickedBytes, baseName } from "$lib/dialogs";
+  import { platform } from "$lib/platform.svelte";
   import { t } from "$lib/i18n.svelte";
   import type { Attachment } from "$lib/types";
 
@@ -17,11 +18,20 @@
   const IMG = /\.(jpe?g|png|heic|heif|webp|gif|tiff?|bmp)$/i;
 
   async function addPaths(paths: string[]) {
-    const imgs = paths.filter((p) => IMG.test(p));
+    // mobile pickers may hand back content:// URIs without an extension: accept all
+    const imgs = platform.mobile ? paths : paths.filter((p) => IMG.test(p));
     if (!imgs.length) return;
     busy = true;
-    try { await api.attachmentAdd(sessionId, imgs); await load(); } finally { busy = false; }
+    try {
+      if (platform.mobile) {
+        for (const p of imgs) await api.attachmentAddBytes(sessionId, baseName(p), await readPickedBytes(p));
+      } else {
+        await api.attachmentAdd(sessionId, imgs);
+      }
+      await load();
+    } catch (e) { err = String(e); } finally { busy = false; }
   }
+  let err = $state<string | null>(null);
 
   async function load() {
     items = await api.attachmentList(sessionId);
@@ -31,7 +41,7 @@
   }
   onMount(async () => {
     await load();
-    if (isTauri) {
+    if (isTauri && !platform.mobile) {
       // Files dropped anywhere on the window arrive here with their absolute paths.
       const { getCurrentWebview } = await import("@tauri-apps/api/webview");
       unlisten = await getCurrentWebview().onDragDropEvent((ev) => {
@@ -53,6 +63,7 @@
     await load();
   }
   async function open(a: Attachment) {
+    if (platform.mobile) return; // no system viewer hand-off on mobile (yet)
     const p = await api.attachmentPath(a.id);
     if (p) await openWithSystem(p);
   }
@@ -65,10 +76,11 @@
 <div class="rounded-md transition {dragOver ? 'ring-2 ring-matcha bg-matcha/5' : ''}">
 <div class="flex items-center gap-3 mb-2">
   <span class="label mb-0">{t("photo.title")}</span>
-  <span class="text-[11px] text-stone-400">{t("photo.dropHint")}</span>
+  {#if !platform.mobile}<span class="text-[11px] text-stone-400">{t("photo.dropHint")}</span>{/if}
   <span class="grow"></span>
   {#if editable}<button class="btn py-0.5 text-xs" onclick={add} disabled={busy}>＋ {t("photo.add")}</button>{/if}
 </div>
+{#if err}<p class="text-xs text-red-700">{err}</p>{/if}
 {#if items.length === 0}
   <p class="text-xs text-stone-400">{t("photo.none")}</p>
 {:else}

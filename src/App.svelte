@@ -3,6 +3,7 @@
   import { api } from "$lib/api";
   import { i18n, t, setLang, type UiLang, type TermMode } from "$lib/i18n.svelte";
   import { loadVocab, vocab } from "$lib/vocab.svelte";
+  import { platform } from "$lib/platform.svelte";
   import Home from "./routes/Home.svelte";
   import Editor from "./routes/Editor.svelte";
   import Stats from "./routes/Stats.svelte";
@@ -63,6 +64,8 @@
       if (mode) i18n.termMode = mode;
       const info = await api.appInfo();
       vocab.selfId = info.self_person_id;
+      platform.os = info.platform; platform.mobile = info.mobile; platform.exportsDir = info.exports_dir;
+      document.documentElement.classList.toggle("mobile", info.mobile);
       await loadVocab();
       ready = true;
     } catch (e) {
@@ -81,8 +84,9 @@
 {#if picking && profiles}
   <ProfilePicker info={profiles} onpick={pickProfile} />
 {:else}
-<div class="h-full flex">
-  <aside class="w-44 shrink-0 border-r border-line bg-white/60 flex flex-col p-3 gap-1">
+<div class="h-full flex flex-col md:flex-row">
+  <!-- desktop / wide: side bar -->
+  <aside class="hidden md:flex w-44 shrink-0 border-r border-line bg-white/60 flex-col p-3 gap-1">
     <div class="px-2 py-2 mb-2 font-semibold tracking-wide text-matcha-deep">{t("app.name")}</div>
     <a href="#/new" class="btn btn-primary justify-center mb-3">{t("nav.new")}</a>
     {#each nav as n}
@@ -113,7 +117,19 @@
     <div class="px-2 text-[10px] text-stone-400">{i18n.lang} · {i18n.termMode}</div>
   </aside>
 
-  <main class="grow overflow-auto p-6">
+  <!-- phone: compact header -->
+  <header class="md:hidden flex items-center gap-2 px-3 pt-[max(env(safe-area-inset-top),0.5rem)] pb-2 border-b border-line bg-white/80">
+    <span class="font-semibold tracking-wide text-matcha-deep">{t("app.name")}</span>
+    {#if profiles && profiles.profiles.length > 1}
+      <select class="field w-auto py-0.5 text-xs" value={profiles.current} onchange={(e) => pickProfile(e.currentTarget.value)}>
+        {#each profiles.profiles as p (p.id)}<option value={p.id}>{p.name}</option>{/each}
+      </select>
+    {/if}
+    <span class="grow"></span>
+    <a href="#/new" class="btn btn-primary py-1 text-xs">{t("nav.new")}</a>
+  </header>
+
+  <main class="grow overflow-auto p-3 md:p-6 pb-[calc(3.5rem+env(safe-area-inset-bottom))] md:pb-6">
     {#if error}
       <div class="card border-red-300 text-red-700">{error}</div>
     {:else if !ready}
@@ -130,5 +146,12 @@
       <Settings />
     {/if}
   </main>
+
+  <!-- phone: bottom tabs -->
+  <nav class="md:hidden fixed bottom-0 inset-x-0 border-t border-line bg-white/95 backdrop-blur flex pb-[env(safe-area-inset-bottom)]">
+    {#each nav as n}
+      <a href={n.href} class="flex-1 text-center py-2 text-xs" class:text-matcha-deep={route.name === n.match} class:font-semibold={route.name === n.match} class:text-stone-500={route.name !== n.match}>{t(n.key)}</a>
+    {/each}
+  </nav>
 </div>
 {/if}

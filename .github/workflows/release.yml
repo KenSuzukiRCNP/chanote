@@ -1,6 +1,9 @@
-# Builds installers for macOS (Apple Silicon + Intel), Windows and Linux when a tag
-# like v0.1.0 is pushed, and attaches them to a GitHub Release (created as a draft so
-# you can write release notes before publishing).
+# Builds installers for macOS (Apple Silicon + Intel), Windows and Linux, plus an
+# Android APK, when a tag like v0.1.0 is pushed, and attaches them to a GitHub Release
+# (created as a draft so you can write release notes before publishing).
+#
+# iOS is not built here: without an Apple Developer Program membership it can only be
+# installed on your own device from Xcode (see CONTRIBUTING.md).
 #
 # macOS builds are ad-hoc signed (no Apple Developer account): users must right-click →
 # Open the first time (see README). To sign + notarize later, see the comment under `env`.
@@ -72,3 +75,65 @@ jobs:
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}
+
+  # Android APK. Release-signed when the ANDROID_KEYSTORE_* secrets exist, otherwise a
+  # debug-signed APK (installable, but a later signed build will not update over it).
+  android:
+    needs: build
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    env:
+      NDK_VERSION: 27.2.12479018
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: "platform-tools platforms;android-34 build-tools;34.0.0 ndk;27.2.12479018"
+      - run: echo "NDK_HOME=$ANDROID_HOME/ndk/$NDK_VERSION" >> "$GITHUB_ENV"
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: "./ -> target"
+      - run: npm ci
+      - name: Android project
+        run: test -d src-tauri/gen/android || npm run tauri android init
+      - name: Signing config
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_B64" ]; then echo "no ANDROID_KEYSTORE_B64 secret: building a debug-signed APK"; exit 0; fi
+          echo "$KEYSTORE_B64" | base64 -d > src-tauri/gen/android/keystore.jks
+          printf 'keyAlias=%s\npassword=%s\nstoreFile=%s\n' "$KEY_ALIAS" "$KEY_PASSWORD" "$PWD/src-tauri/gen/android/keystore.jks" > src-tauri/gen/android/keystore.properties
+          python3 scripts/android-signing.py
+          echo "SIGNED=1" >> "$GITHUB_ENV"
+      - name: Build APK
+        run: |
+          if [ "$SIGNED" = "1" ]; then npm run tauri android build -- --apk; else npm run tauri android build -- --apk --debug; fi
+          VER=$(node -p "require('./package.json').version")
+          APK=$(find src-tauri/gen/android/app/build/outputs/apk -name '*.apk' | head -1)
+          mkdir -p out && cp "$APK" "out/chanote_${VER}_android.apk"
+          ls -la out
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: out/*.apk
+      - name: Attach to the draft release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          draft: true
+          files: out/*.apk
