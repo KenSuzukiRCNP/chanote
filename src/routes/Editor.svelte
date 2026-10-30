@@ -6,6 +6,7 @@
   import { t, term, axisLabel } from "$lib/i18n.svelte";
   import { active, ranked, get, teachers, vocab, eventKinds } from "$lib/vocab.svelte";
   import { setDraft, takeDraft } from "$lib/draft.svelte";
+  import { syncSoon } from "$lib/sync.svelte";
   import { emptySession, emptyTemae, UNKNOWN, NONE, SESSION_FORMS, MY_ROLES, ROSTER_ROLES } from "$lib/types";
   import type { Session, SessionPerson, Temae, MyRole, SessionRole, TemaePerson } from "$lib/types";
   import TemaeExtras from "./TemaeExtras.svelte";
@@ -172,6 +173,7 @@
     saving = true; err = null;
     try {
       await api.sessionSave($state.snapshot(s));
+      syncSoon();
       location.hash = "#/";
     } catch (e) {
       err = String(e);
@@ -183,6 +185,7 @@
   async function remove() {
     if (s.id == null) return;
     await api.sessionDelete(s.id);
+    syncSoon();
     location.hash = "#/";
   }
 

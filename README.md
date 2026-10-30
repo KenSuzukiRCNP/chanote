@@ -56,7 +56,9 @@ pick a chaire and its shifuku comes along.
 **Yours, on your machine.** Everything lives in one SQLite file plus a photo folder on your
 computer. No account, no server, no tracking. Export to JSON (complete) or CSV (one row per
 temae, for Excel or pandas), make a zip backup with photos, restore it on another Mac.
-Several people can share one computer, each with their own diary — and a friend's export
+Keep the diary on your Mac and your iPhone: pick a folder in iCloud Drive or Dropbox and
+chanote syncs through it — no account and no server, only a log of changes in a folder
+you already own. Several people can share one computer, each with their own diary — and a friend's export
 can be imported *as your own* diary, with their guest entries becoming your roles.
 
 **Japanese and English.** The interface is available in both. Tea terms are shown in
@@ -98,8 +100,9 @@ Download the latest release from the **[Releases](../../releases)** page.
   [CONTRIBUTING.md](CONTRIBUTING.md).
 
 On a phone, exports and backups go to the Files app (On My iPhone → chanote) or the
-Android save dialog; move them to your computer and use *Import JSON* there. Automatic
-sync between devices is planned for the next version.
+Android save dialog; move them to your computer and use *Import JSON* there. To keep the
+phone and the computer in step automatically, use Settings → *Sync* (iOS: a folder in
+iCloud Drive; Android: not yet).
 
 Want to try it with data first? Settings → *Import JSON* → pick
 [`samples/sample-data.json`](samples/sample-data.json) (two fictional years of practice).

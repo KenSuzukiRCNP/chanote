@@ -31,6 +31,9 @@ function effPersons(s: Session, t: Session["temae"][number]) {
 }
 const practiceOk = (f: { practice?: boolean | null }, s: Session) => f.practice == null || s.practice === f.practice;
 
+const mockSync = { enabled: false, diary_id: null as string | null, diary_name: null as string | null, device: null as string | null,
+  last_sync: null as string | null, outbox: 0, conflicts: 0, pending: 0, folder: null as string | null, supported: true };
+
 function blank() {
   return { id: null, time: null, temae_id: null, temae_alias_id: null, temae_free: null, host_id: null, host_free: null, teacher_id: null, my_role: null, my_role_note: null, my_seat: null, hearth: null, katte: null, room: null, tea: null, tana_id: null, tana_free: null, kinin: null, note: null, persons: [], tsukimono: [], tools: [] };
 }
@@ -226,6 +229,23 @@ export async function invoke<T>(cmd: string, args: Record<string, unknown> = {})
       return 0 as T;
     case "import_read":
       return { vocab_added: 0, vocab_skipped: 12, sessions_added: 0, sessions_skipped: 3 } as T;
+    case "sync_status":
+      return { ...mockSync } as T;
+    case "sync_choose_folder":
+      return [String(args.path ?? "/mock/iCloud Drive"), [{ id: "d1", name: "Ken", created_at: "2026-10-20T10:00:00Z", devices: 1 }]] as T;
+    case "sync_setup":
+      Object.assign(mockSync, { enabled: true, diary_id: "d1", diary_name: (args.name as string) ?? "Ken", device: "a1b2c3", last_sync: new Date().toISOString().slice(0, 19) + "Z", folder: "/mock/iCloud Drive" });
+      return { sent: sessions.size, received: 0, conflicts: 0, pending: 0, missing_files: 0, adopted: 0 } as T;
+    case "sync_now":
+      mockSync.last_sync = new Date().toISOString().slice(0, 19) + "Z";
+      return { sent: 0, received: 0, conflicts: 0, pending: 0, missing_files: 0, adopted: 0 } as T;
+    case "sync_disable":
+      Object.assign(mockSync, { enabled: false, diary_id: null, diary_name: null, device: null, last_sync: null, folder: null });
+      return undefined as T;
+    case "sync_conflicts":
+      return [] as T;
+    case "sync_conflict_resolve":
+      return undefined as T;
     case "export_text":
       return JSON.stringify({ app: "chanote", schema_version: 3, vocab, sessions: [...sessions.values()] }) as T;
     case "export_to_documents":

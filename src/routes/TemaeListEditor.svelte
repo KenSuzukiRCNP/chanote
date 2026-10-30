@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { syncSoon } from "$lib/sync.svelte";
   // Temae tab of the list editor: add a procedure or a familiar name (alias), edit
   // names / category / defaults, hide, delete user rows, copy a row as YAML for the pack.
   import { api } from "$lib/api";
@@ -104,7 +105,7 @@
     if (add.mode === "alias" && !add.aliasOf) return;
     await api.vocabUpsert(toVocab(add));
     add = { ...blank(), mode: add.mode, category: add.category };
-    await loadVocab();
+    await loadVocab(); syncSoon();
   }
   function startEdit(v: Vocab) {
     editing = v.id;
@@ -117,17 +118,17 @@
   async function commitEdit(v: Vocab) {
     await api.vocabUpsert(toVocab(edit, v));
     editing = null;
-    await loadVocab();
+    await loadVocab(); syncSoon();
   }
   async function resetToPack(v: Vocab) {
     await api.packResetRow(v.id);
     editing = null;
-    await loadVocab();
+    await loadVocab(); syncSoon();
   }
-  async function toggleArchive(v: Vocab) { await api.vocabArchive(v.id, !v.archived); await loadVocab(); }
+  async function toggleArchive(v: Vocab) { await api.vocabArchive(v.id, !v.archived); await loadVocab(); syncSoon(); }
   async function remove(v: Vocab) {
     msg = null;
-    try { await api.vocabDelete(v.id); await loadVocab(); }
+    try { await api.vocabDelete(v.id); await loadVocab(); syncSoon(); }
     catch (e) { const m = String(e); const n = /used by (\d+)/.exec(m)?.[1]; msg = n ? t("lists.inUse", { name: term(v), n }) : m; }
   }
   function toggleTsukimono(d: Draft, k: string) {

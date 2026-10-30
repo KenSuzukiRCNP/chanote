@@ -11,6 +11,7 @@
 //! - `import` : re-import of chanote JSON
 //! - `attachment` : photos attached to sessions (files in the data dir, thumbnails)
 //! - `backup` : zip of the database + attachments, and restore
+//! - `sync`   : folder sync (change log per device in a shared folder)
 //! - `model`  : serde types shared with the frontend
 
 pub mod attachment;
@@ -24,6 +25,7 @@ pub mod pack;
 pub mod ranking;
 pub mod record;
 pub mod stats;
+pub mod sync;
 pub mod vocab;
 
 pub use db::Db;

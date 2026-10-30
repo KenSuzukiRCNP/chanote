@@ -276,3 +276,21 @@ export interface PreviewRow {
   summary: string; n_temae: number; duplicate_of: number | null;
 }
 export interface ImportPreview { persons: PreviewPerson[]; rows: PreviewRow[]; vocab_new: number; schema_version: number }
+
+// ---- sync -------------------------------------------------------------------
+
+export interface SyncStatus {
+  enabled: boolean;
+  diary_id: string | null;
+  diary_name: string | null;
+  device: string | null;
+  last_sync: string | null;
+  outbox: number;
+  conflicts: number;
+  pending: number;
+}
+export interface SyncInfo extends SyncStatus { folder: string | null; supported: boolean }
+export interface SyncReport { sent: number; received: number; conflicts: number; pending: number; missing_files: number; adopted: number }
+export interface DiaryInfo { id: string; name: string; created_at: string; devices: number }
+export interface SyncEvent { rev: string; base: string | null; op: string; [k: string]: unknown }
+export interface SyncConflict { id: number; kind: string; key: string; label: string | null; at: string; lost: SyncEvent }

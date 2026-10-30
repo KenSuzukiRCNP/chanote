@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { syncSoon } from "$lib/sync.svelte";
   // Vocabulary editor: places, people, shelves, utensils, temae (aliases).
   // Rows can be renamed, archived, given a parent (places/shelves), flagged as teacher
   // (people), and moved up/down. Temae tab adds aliases of pack temae with modifiers.
@@ -70,7 +71,7 @@
     await api.vocabUpsert(v);
     newJa = ""; newRomaji = ""; newTeacher = false; newNote = "";
     if (kind !== "tool") newParent = null; // keep the category for the next tool
-    await loadVocab();
+    await loadVocab(); syncSoon();
   }
 
   async function addAlias() {
@@ -92,7 +93,7 @@
     };
     await api.vocabUpsert(v);
     aliasJa = ""; aliasRomaji = ""; aliasOf = ""; aliasMods = {}; aliasTsukimono = "";
-    await loadVocab();
+    await loadVocab(); syncSoon();
   }
 
   function startEdit(v: Vocab) {
@@ -120,14 +121,14 @@
       }
     }
     editing = null;
-    await loadVocab();
+    await loadVocab(); syncSoon();
   }
   let delMsg = $state<string | null>(null);
   async function remove(v: Vocab) {
     delMsg = null;
     try {
       await api.vocabDelete(v.id);
-      await loadVocab();
+      await loadVocab(); syncSoon();
     } catch (e) {
       const m = String(e);
       const n = /used by (\d+)/.exec(m)?.[1];
@@ -136,7 +137,7 @@
   }
   async function toggleArchive(v: Vocab) {
     await api.vocabArchive(v.id, !v.archived);
-    await loadVocab();
+    await loadVocab(); syncSoon();
   }
   async function move(v: Vocab, d: number) {
     const list = rows;
@@ -147,7 +148,7 @@
     const sa = a.sort ?? i, sb = b.sort ?? j;
     await api.vocabUpsert({ ...a, sort: sb === sa ? sb + d : sb });
     await api.vocabUpsert({ ...b, sort: sa });
-    await loadVocab();
+    await loadVocab(); syncSoon();
   }
 
   function modsSummary(m: AxisValues): string {

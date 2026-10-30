@@ -10,11 +10,46 @@ one-paragraph English summary; the details are in Japanese.
 ## [Unreleased]
 
 ### 予定
-- 端末間の同期(同期フォルダ + 変更ログ、v0.5.1)
-- iOS の HEIC サムネイル
+- Android の同期フォルダ対応
+- 同期フォルダの変更ログの整理(古いログをまとめる)
 - 人物・場所の入力補完(コンボボックス)
 - 統計の期間の任意指定、CSV の列選択
 - 流派パック(裏千家以外)の追加 ── [docs/school-packs.md](docs/school-packs.md) 参照
+
+## [0.5.1] - 2026-10-30
+
+**Summary.** Sync between devices through a folder in iCloud Drive, Dropbox or similar:
+each device keeps its own database and writes a log of its changes to the folder; the
+others apply it. Joining with existing records merges matching ones instead of doubling
+them; concurrent edits keep the later one and list the other under Settings → Sync →
+Conflicts so it can be restored. Works on macOS, Windows, Linux and iOS (iCloud Drive);
+not yet on Android. HEIC photos on iOS are converted to JPEG, so they get thumbnails.
+iOS and Android app icons.
+
+### 追加
+- **同期**(設定 → 同期): iCloud Drive / Dropbox などのフォルダを選び、「新しい日記を作る」か「この日記に参加」。
+  以後、起動時・保存の数秒後・3分ごと・アプリに戻ったときに自動で同期し、「今すぐ同期」もできます。
+  データベース本体はフォルダに置かず、各端末が自分の変更だけを `chanote-sync/<日記>/log/<端末>/` に
+  追記します(同じファイルを2台が書くことはありません)。写真の原本も同じフォルダを経由します。
+- **参加時の統合**: 参加する端末に既にある記録は、日付・場所・点前の並びが同じなら同じ記録として扱い、
+  二重になりません(JSON で移した記録など)。
+- **競合**: 2台が同じ記録をほぼ同時に変えた場合は新しい変更を残し、もう一方を「競合」に置きます。
+  「こちらに戻す」で復元できます。中身が同じなら競合にしません。
+- iOS: フォルダ選択とアクセス保持のための小さなネイティブ部品(`crates/tauri-plugin-chanote-native`)。
+  iCloud にしかないファイルはダウンロードを依頼し、次の同期で取り込みます。
+- iOS / Android のアプリアイコン(デスクトップ版のアイコンから生成)。
+
+### 変更
+- データベースはマイグレーション 005 で更新されます(記録と写真に端末をまたいで使う ID を付与、同期用の表を追加)。
+- バックアップから復元すると、その端末の同期設定は解除されます(別の端末の同期 ID を引き継がないため)。
+  復元後にもう一度「この日記に参加」を選んでください。
+
+### 修正
+- iOS で HEIC の写真にサムネイルが付かなかった(取り込み時に JPEG へ変換)。
+
+### 既知の制限
+- Android ではまだ同期できません(JSON の書き出し/読み込みでやり取り)。
+- 別々の端末で同じ人・場所を別々に登録すると、同期後に2件並びます(リスト編集で片方を非表示に)。
 
 ## [0.5.0] - 2026-10-16
 
@@ -165,7 +200,8 @@ release builds for macOS, Windows and Linux.
   ホバーで表示。名前は日本語かアルファベットのどちらか一方だけでも登録できます。
 - アプリアイコン、macOS(Apple Silicon / Intel)・Windows・Linux 向けの配布ビルド。
 
-[Unreleased]: https://github.com/KenSuzukiRCNP/chanote/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/KenSuzukiRCNP/chanote/compare/v0.5.1...HEAD
+[0.5.1]: https://github.com/KenSuzukiRCNP/chanote/releases/tag/v0.5.1
 [0.5.0]: https://github.com/KenSuzukiRCNP/chanote/releases/tag/v0.5.0
 [0.4.0]: https://github.com/KenSuzukiRCNP/chanote/releases/tag/v0.4.0
 [0.3.0]: https://github.com/KenSuzukiRCNP/chanote/releases/tag/v0.3.0

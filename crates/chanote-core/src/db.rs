@@ -9,6 +9,7 @@ const MIGRATIONS: &[(&str, &str)] = &[
     ("002_online", include_str!("../migrations/002_online.sql")),
     ("003_pack_prefix", include_str!("../migrations/003_pack_prefix.sql")),
     ("004_events", include_str!("../migrations/004_events.sql")),
+    ("005_sync", include_str!("../migrations/005_sync.sql")),
 ];
 
 /// Data migrations that need Rust (JSON rewriting etc.), run inside the same
@@ -22,6 +23,9 @@ fn data_migration(version: i64, tx: &rusqlite::Transaction) -> Result<()> {
 
 pub struct Db {
     conn: Mutex<Connection>,
+    /// While set, record changes are not written to the sync outbox (applying remote
+    /// changes, installing packs).
+    pub(crate) sync_quiet: std::sync::atomic::AtomicBool,
 }
 
 impl Db {
@@ -45,7 +49,7 @@ impl Db {
              PRAGMA journal_mode = WAL;
              PRAGMA synchronous = NORMAL;",
         )?;
-        let db = Db { conn: Mutex::new(conn) };
+        let db = Db { conn: Mutex::new(conn), sync_quiet: std::sync::atomic::AtomicBool::new(false) };
         db.migrate()?;
         Ok(db)
     }

@@ -233,6 +233,8 @@ impl Db {
         }
         // order: parents (school, categories, tana parents) before children — to_vocab already
         // emits categories before temae; tana parents must precede children in the YAML.
+        // Pack rows are the same on every device: never sent to the sync folder.
+        let _quiet = crate::sync::Quiet::new(self);
         for v in pack.to_vocab() {
             // rows the user edited in the app (meta.pinned) keep their values
             if let Some(existing) = self.vocab_get(&v.id)? {

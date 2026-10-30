@@ -468,13 +468,14 @@ checksum = "9330f8b2ff13f34540b44e946ef35111825727b38d33286ef986142615121801"
 
 [[package]]
 name = "chanote"
-version = "0.5.0"
+version = "0.5.1"
 dependencies = [
  "chanote-core",
  "serde",
  "serde_json",
  "tauri",
  "tauri-build",
+ "tauri-plugin-chanote-native",
  "tauri-plugin-dialog",
  "tauri-plugin-fs",
  "tauri-plugin-opener",
@@ -3743,6 +3744,16 @@ dependencies = [
  "serde_json",
  "tauri-utils",
  "walkdir",
+]
+
+[[package]]
+name = "tauri-plugin-chanote-native"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "tauri",
+ "tauri-plugin",
 ]
 
 [[package]]

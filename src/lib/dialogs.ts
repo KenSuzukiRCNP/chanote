@@ -70,3 +70,30 @@ export function baseName(path: string): string {
   const last = decodeURIComponent(q.split(/[\\/]/).pop() ?? "file");
   return last.split(":").pop() || "file";
 }
+
+/** Desktop folder picker (iOS uses the native picker inside the sync_choose_folder command). */
+export async function pickFolder(title: string): Promise<string | null> {
+  if (!isTauri) return "/mock/iCloud Drive";
+  const { open } = await import("@tauri-apps/plugin-dialog");
+  const res = await open({ directory: true, title });
+  return (Array.isArray(res) ? res[0] : res) ?? null;
+}
+
+/** iOS: HEIC photos become JPEG before they reach the app (no HEIC decoder in Rust; the
+ *  WebView can decode them). Orientation is applied by createImageBitmap. Falls back to the
+ *  original bytes if decoding fails. */
+export async function heicToJpeg(name: string, bytes: Uint8Array): Promise<{ name: string; bytes: Uint8Array }> {
+  if (!/\.(heic|heif)$/i.test(name)) return { name, bytes };
+  try {
+    const blob = new Blob([bytes as BlobPart], { type: "image/heic" });
+    const bmp = await createImageBitmap(blob, { imageOrientation: "from-image" });
+    const canvas = document.createElement("canvas");
+    canvas.width = bmp.width; canvas.height = bmp.height;
+    canvas.getContext("2d")!.drawImage(bmp, 0, 0);
+    const jpg: Blob | null = await new Promise((res) => canvas.toBlob(res, "image/jpeg", 0.9));
+    if (!jpg) return { name, bytes };
+    return { name: name.replace(/\.(heic|heif)$/i, ".jpg"), bytes: new Uint8Array(await jpg.arrayBuffer()) };
+  } catch {
+    return { name, bytes };
+  }
+}

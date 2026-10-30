@@ -97,6 +97,9 @@ pub const SESSION_ROLES: &[&str] = &["teacher", "host", "guest", "hanto", "mizuy
 pub struct Session {
     #[serde(default)]
     pub id: Option<i64>,
+    /// Global id (stable across devices; used by sync). Assigned on first save.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub uid: Option<String>,
     pub date: Option<String>,
     #[serde(default = "default_date_prec")]
     pub date_prec: String,
@@ -143,6 +146,7 @@ impl Default for Session {
     fn default() -> Self {
         Session {
             id: None,
+            uid: None,
             date: None,
             date_prec: default_date_prec(),
             place_id: None,

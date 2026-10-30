@@ -4,6 +4,7 @@
   import { i18n, t, setLang, type UiLang, type TermMode } from "$lib/i18n.svelte";
   import { loadVocab, vocab } from "$lib/vocab.svelte";
   import { platform } from "$lib/platform.svelte";
+  import { startAutoSync, sync } from "$lib/sync.svelte";
   import Home from "./routes/Home.svelte";
   import Editor from "./routes/Editor.svelte";
   import Stats from "./routes/Stats.svelte";
@@ -68,6 +69,7 @@
       document.documentElement.classList.toggle("mobile", info.mobile);
       await loadVocab();
       ready = true;
+      void startAutoSync();
     } catch (e) {
       error = String(e);
     }
@@ -114,6 +116,11 @@
         {/if}
       </div>
     {/if}
+    {#if sync.info?.enabled}
+      <a href="#/settings" class="px-2 text-[11px] text-stone-500 hover:text-ink" title={sync.error ?? ""}>
+        {sync.running ? t("sync.running") : sync.error ? "⚠ " + t("sync.error") : t("sync.ok")}{#if sync.info.conflicts} · {t("sync.conflictsN", { n: sync.info.conflicts })}{/if}
+      </a>
+    {/if}
     <div class="px-2 text-[10px] text-stone-400">{i18n.lang} · {i18n.termMode}</div>
   </aside>
 
@@ -126,6 +133,9 @@
       </select>
     {/if}
     <span class="grow"></span>
+    {#if sync.info?.enabled}
+      <span class="text-[11px] text-stone-500">{sync.running ? "⟳" : sync.error ? "⚠" : sync.info.conflicts ? "!" : "✓"}</span>
+    {/if}
     <a href="#/new" class="btn btn-primary py-1 text-xs">{t("nav.new")}</a>
   </header>
 

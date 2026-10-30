@@ -56,6 +56,7 @@ impl Db {
                 v.archived as i64, meta
             ],
         )?;
+        self.sync_note_vocab(&v.id)?;
         Ok(())
     }
 
@@ -64,6 +65,7 @@ impl Db {
             "UPDATE vocab SET archived = ?2 WHERE id = ?1",
             params![id, archived as i64],
         )?;
+        self.sync_note_vocab(id)?;
         Ok(())
     }
 
@@ -101,6 +103,7 @@ impl Db {
             return Err(Error::InUse(n));
         }
         self.conn().execute("DELETE FROM vocab WHERE id = ?1", [id])?;
+        self.sync_note(crate::sync::Op::VocabDel { id: id.to_string() })?;
         Ok(())
     }
 

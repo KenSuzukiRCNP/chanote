@@ -1,6 +1,6 @@
 {
   "name": "chanote",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "private": true,
   "description": "茶道稽古記録アプリ / Tea ceremony practice log",
   "type": "module",

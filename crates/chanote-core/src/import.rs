@@ -71,7 +71,7 @@ fn upgrade_doc_v2(mut doc: ExportDoc) -> ExportDoc {
 }
 
 /// Fingerprint used for duplicate detection: date, place, and the ordered temae ids.
-fn fingerprint(s: &Session) -> String {
+pub(crate) fn fingerprint(s: &Session) -> String {
     let temae: Vec<String> = s
         .temae
         .iter()
@@ -390,6 +390,12 @@ impl Db {
             s.id = None;
             for t in s.temae.iter_mut() {
                 t.id = None;
+            }
+            // keep the global id of our own exports, unless that record is already here
+            if let Some(uid) = &s.uid {
+                if self.session_id_by_uid(uid)?.is_some() {
+                    s.uid = None;
+                }
             }
             self.session_save(&s)?;
             rep.sessions_added += 1;

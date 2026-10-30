@@ -147,7 +147,7 @@ impl Db {
         let conn = self.conn();
         let head = conn
             .query_row(
-                "SELECT id, date, date_prec, place_id, place_note, form, event_kind, practice, my_role, my_seat, online, note
+                "SELECT id, date, date_prec, place_id, place_note, form, event_kind, practice, my_role, my_seat, online, note, uid
                  FROM session WHERE id = ?1",
                 [id],
                 |r| {
@@ -167,6 +167,7 @@ impl Db {
                         persons: vec![],
                         temae: vec![],
                         kind: None,
+                        uid: r.get(12)?,
                     })
                 },
             )
@@ -266,10 +267,10 @@ impl Db {
         let id = match s.id {
             None => {
                 tx.execute(
-                    "INSERT INTO session (date, date_prec, place_id, place_note, form, event_kind, practice, my_role, my_seat, online, note)
-                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
+                    "INSERT INTO session (date, date_prec, place_id, place_note, form, event_kind, practice, my_role, my_seat, online, note, uid)
+                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, COALESCE(?12, lower(hex(randomblob(16)))))",
                     params![s.date, s.date_prec, s.place_id, s.place_note, s.form, s.event_kind, s.practice as i64,
-                            s.my_role, s.my_seat, s.online as i64, s.note],
+                            s.my_role, s.my_seat, s.online as i64, s.note, s.uid],
                 )?;
                 tx.last_insert_rowid()
             }
@@ -302,12 +303,26 @@ impl Db {
             insert_temae(&tx, id, i as i64, t)?;
         }
         tx.commit()?;
+        drop(conn);
+        self.sync_note_session(id)?;
         Ok(id)
     }
 
     pub fn session_delete(&self, id: i64) -> Result<()> {
+        let uid = self.session_uid(id)?;
         self.conn().execute("DELETE FROM session WHERE id = ?1", [id])?;
+        if let Some(uid) = uid {
+            self.sync_note(crate::sync::Op::SessionDel { uid })?;
+        }
         Ok(())
+    }
+
+    pub fn session_uid(&self, id: i64) -> Result<Option<String>> {
+        Ok(self.conn().query_row("SELECT uid FROM session WHERE id = ?1", [id], |r| r.get(0)).optional()?.flatten())
+    }
+
+    pub fn session_id_by_uid(&self, uid: &str) -> Result<Option<i64>> {
+        Ok(self.conn().query_row("SELECT id FROM session WHERE uid = ?1", [uid], |r| r.get(0)).optional()?)
     }
 }
 

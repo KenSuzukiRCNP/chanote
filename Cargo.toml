@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/chanote-core", "src-tauri"]
+members = ["crates/chanote-core", "crates/tauri-plugin-chanote-native", "src-tauri"]
 
 [profile.release]
 codegen-units = 1

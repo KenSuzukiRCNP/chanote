@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { syncSoon } from "$lib/sync.svelte";
   // Import wizard: choose whose diary this is (self swap), review every record with
   // duplicate warnings, tick what to import.
   import { api } from "$lib/api";
@@ -34,7 +35,7 @@
     try {
       const include = Object.entries(checked).filter(([, v]) => v).map(([k]) => Number(k));
       const rep = await api.importApply(source, { self_as: swapped ? selfAs : null, original_self_name: swapped ? authorName || null : null, include });
-      await loadVocab();
+      await loadVocab(); syncSoon();
       onclose(rep);
     } catch (e) { err = String(e); busy = false; }
   }

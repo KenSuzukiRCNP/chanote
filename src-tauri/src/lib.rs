@@ -31,6 +31,8 @@ struct AppState {
     /// app data root: profiles.json lives here; the default profile's data too
     root: PathBuf,
     open: RwLock<Open>,
+    /// iOS: sync folder path resolved from its bookmark (access is held for the session)
+    sync_parent: std::sync::Mutex<Option<PathBuf>>,
 }
 
 impl AppState {
@@ -464,10 +466,15 @@ fn backup_restore(state: State<AppState>, path: String) -> CmdResult<usize> {
     drop(old);
     let n = chanote_core::backup::restore_zip(&data_dir, std::path::Path::new(&path)).map_err(e);
     let reopened = open_profile(&state.root, &profile).map_err(e)?;
+    // the restored database may carry another device's sync identity: never reuse it
+    if n.is_ok() {
+        reopened.db.sync_reset().map_err(e)?;
+    }
     {
         let mut guard = state.open.write().map_err(|_| "state lock poisoned".to_string())?;
         *guard = reopened;
     }
+    *state.sync_parent.lock().unwrap() = None;
     n
 }
 
@@ -488,6 +495,151 @@ fn backup_write(state: State<AppState>, path: String) -> CmdResult<()> {
         .execute("VACUUM INTO ?1", [&path])
         .map_err(e)?;
     Ok(())
+}
+
+// ---- sync (folder of change logs; see chanote-core/src/sync.rs) ------------------
+
+use chanote_core::sync::{Conflict, DiaryInfo, SyncReport, SyncStatus};
+use tauri_plugin_chanote_native::NativeExt;
+
+#[derive(Serialize)]
+struct SyncInfo {
+    #[serde(flatten)]
+    status: SyncStatus,
+    /// the folder the user chose (display only)
+    folder: Option<String>,
+    /// false on Android (no shared folder support yet)
+    supported: bool,
+}
+
+const SYNC_SUPPORTED: bool = !cfg!(target_os = "android");
+
+fn device_label() -> String {
+    match std::env::consts::OS {
+        "macos" => "Mac".into(),
+        "ios" => "iPhone/iPad".into(),
+        "windows" => "Windows".into(),
+        "linux" => "Linux".into(),
+        other => other.into(),
+    }
+}
+
+/// The parent folder of `chanote-sync/` for the open profile. On iOS this re-opens access
+/// through the saved bookmark (once per launch).
+fn sync_parent(app: &tauri::AppHandle, state: &AppState) -> Result<PathBuf, String> {
+    if let Some(p) = state.sync_parent.lock().unwrap().clone() {
+        return Ok(p);
+    }
+    let db_setting = |k: &str| state.o().db.get_setting(k).map_err(e);
+    let path = if cfg!(target_os = "ios") {
+        let bookmark = db_setting("sync_bookmark")?.ok_or("no sync folder chosen")?;
+        let f = app.native().restore_access(&bookmark)?;
+        if let Some(b) = f.bookmark.as_deref().filter(|b| *b != bookmark) {
+            state.o().db.set_setting("sync_bookmark", b).map_err(e)?;
+        }
+        PathBuf::from(f.path.ok_or("sync folder unavailable")?)
+    } else {
+        PathBuf::from(db_setting("sync_parent")?.ok_or("no sync folder chosen")?)
+    };
+    *state.sync_parent.lock().unwrap() = Some(path.clone());
+    Ok(path)
+}
+
+fn sync_info(state: &AppState) -> CmdResult<SyncInfo> {
+    let o = state.o();
+    Ok(SyncInfo {
+        status: o.db.sync_status().map_err(e)?,
+        folder: o.db.get_setting("sync_parent").map_err(e)?,
+        supported: SYNC_SUPPORTED,
+    })
+}
+
+#[tauri::command]
+fn sync_status(state: State<AppState>) -> CmdResult<SyncInfo> {
+    sync_info(&state)
+}
+
+/// Let the user choose the parent folder. Desktop: `path` comes from the JS folder dialog.
+/// iOS: `path` is ignored and the native picker is shown. Returns the diaries found there.
+#[tauri::command]
+async fn sync_choose_folder(app: tauri::AppHandle, path: Option<String>) -> CmdResult<(String, Vec<DiaryInfo>)> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let state = app.state::<AppState>();
+        let parent = if cfg!(target_os = "ios") {
+            let f = app.native().pick_folder()?;
+            if f.cancelled {
+                return Err("cancelled".to_string());
+            }
+            let o = state.o();
+            o.db.set_setting("sync_bookmark", f.bookmark.as_deref().unwrap_or_default()).map_err(e)?;
+            PathBuf::from(f.path.ok_or("no folder")?)
+        } else {
+            PathBuf::from(path.ok_or("no folder")?)
+        };
+        state.o().db.set_setting("sync_parent", &parent.display().to_string()).map_err(e)?;
+        *state.sync_parent.lock().unwrap() = Some(parent.clone());
+        let list = chanote_core::sync::list_diaries(&parent).map_err(e)?;
+        Ok((parent.display().to_string(), list))
+    })
+    .await
+    .map_err(e)?
+}
+
+/// Create a new diary (`id` = None, `name` given) or join an existing one in the chosen folder.
+#[tauri::command]
+async fn sync_setup(app: tauri::AppHandle, id: Option<String>, name: Option<String>) -> CmdResult<SyncReport> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let state = app.state::<AppState>();
+        let parent = sync_parent(&app, &state)?;
+        let o = state.o();
+        match id {
+            Some(id) => o.db.sync_join(&parent, &id, &o.data_dir, &device_label()).map_err(e),
+            None => o
+                .db
+                .sync_create(&parent, name.as_deref().unwrap_or("chanote"), &o.data_dir, &device_label())
+                .map_err(e),
+        }
+    })
+    .await
+    .map_err(e)?
+}
+
+#[tauri::command]
+async fn sync_now(app: tauri::AppHandle) -> CmdResult<SyncReport> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let state = app.state::<AppState>();
+        let parent = sync_parent(&app, &state)?;
+        let o = state.o();
+        if cfg!(target_os = "ios") {
+            if let Some(id) = o.db.get_setting("sync_diary").map_err(e)? {
+                // ask iCloud for anything that is only in the cloud; it arrives by the next round
+                let _ = app.native().ensure_downloaded(&chanote_core::sync::diary_dir(&parent, &id).display().to_string());
+            }
+        }
+        o.db.sync_run(&parent, &o.data_dir).map_err(e)
+    })
+    .await
+    .map_err(e)?
+}
+
+#[tauri::command]
+fn sync_disable(state: State<AppState>) -> CmdResult<()> {
+    let o = state.o();
+    o.db.sync_reset().map_err(e)?;
+    let _ = o.db.conn().execute("DELETE FROM setting WHERE key IN ('sync_parent','sync_bookmark')", []);
+    *state.sync_parent.lock().unwrap() = None;
+    Ok(())
+}
+
+#[tauri::command]
+fn sync_conflicts(state: State<AppState>) -> CmdResult<Vec<Conflict>> {
+    state.o().db.sync_conflicts().map_err(e)
+}
+
+#[tauri::command]
+fn sync_conflict_resolve(state: State<AppState>, id: i64, restore: bool) -> CmdResult<()> {
+    let o = state.o();
+    o.db.sync_conflict_resolve(id, restore, &o.data_dir).map_err(e)
 }
 
 // ---- setup ------------------------------------------------------------------
@@ -562,6 +714,7 @@ fn profile_switch(state: State<AppState>, id: String) -> CmdResult<()> {
         let _ = guard.db.conn().execute_batch("PRAGMA wal_checkpoint(TRUNCATE);");
         *guard = new;
     }
+    *state.sync_parent.lock().unwrap() = None;
     f.last = id;
     f.save(&state.root).map_err(e)
 }
@@ -572,12 +725,13 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_chanote_native::init())
         .setup(|app| {
             let root = app.path().app_data_dir()?;
             std::fs::create_dir_all(&root)?;
             let f = Profiles::load(&root)?;
             let open = open_profile(&root, &f.last)?;
-            app.manage(AppState { root, open: RwLock::new(open) });
+            app.manage(AppState { root, open: RwLock::new(open), sync_parent: std::sync::Mutex::new(None) });
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -632,6 +786,13 @@ pub fn run() {
             attachment_path,
             attachment_counts,
             attachment_rebuild_thumbs,
+            sync_status,
+            sync_choose_folder,
+            sync_setup,
+            sync_now,
+            sync_disable,
+            sync_conflicts,
+            sync_conflict_resolve,
         ])
         .run(tauri::generate_context!())
         .expect("error while running chanote");

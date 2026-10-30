@@ -7,6 +7,7 @@
   import { fmtDate } from "$lib/format";
   import { SESSION_FORMS, type SessionSummary, type Session } from "$lib/types";
   import TemaeLine from "./TemaeLine.svelte";
+  import { sync } from "$lib/sync.svelte";
   import TemaePicker from "./TemaePicker.svelte";
 
   let rows = $state<SessionSummary[]>([]);
@@ -46,7 +47,8 @@
   $effect(() => {
     void homeFilter.temaeSel; void homeFilter.myRoleOnly; void homeFilter.place_id; void homeFilter.teacher_id;
     void homeFilter.since; void homeFilter.until; void homeFilter.persons.length; void homeFilter.tools.length; void homeFilter.text;
-    void homeFilter.form; void homeFilter.practice;
+    void homeFilter.form; void homeFilter.practice; void sync.tick;
+    detail = {};
     void load();
   });
   // filtering by temae is usually done to re-read the notes: switch them on

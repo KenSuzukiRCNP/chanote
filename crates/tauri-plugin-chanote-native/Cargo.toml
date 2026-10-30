@@ -1,0 +1,15 @@
+[package]
+name = "tauri-plugin-chanote-native"
+version = "0.1.0"
+edition = "2021"
+description = "Small native helpers for chanote on iOS: pick a folder (e.g. in iCloud Drive) and keep access to it across launches; ask iCloud to download files."
+license = "MIT"
+links = "tauri-plugin-chanote-native"
+
+[dependencies]
+tauri = { version = "2.12", features = [] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[build-dependencies]
+tauri-plugin = { version = "2.7", features = ["build"] }

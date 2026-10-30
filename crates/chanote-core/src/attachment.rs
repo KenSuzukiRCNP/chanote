@@ -13,6 +13,9 @@ pub const THUMB_MAX: u32 = 480;
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Attachment {
     pub id: i64,
+    /// global id (sync)
+    #[serde(default)]
+    pub uid: Option<String>,
     pub session_id: Option<i64>,
     pub temae_id: Option<i64>,
     /// relative to the data dir
@@ -24,6 +27,7 @@ pub struct Attachment {
 fn row(r: &rusqlite::Row) -> rusqlite::Result<Attachment> {
     Ok(Attachment {
         id: r.get(0)?,
+        uid: r.get(6)?,
         session_id: r.get(1)?,
         temae_id: r.get(2)?,
         path: r.get(3)?,
@@ -32,7 +36,7 @@ fn row(r: &rusqlite::Row) -> rusqlite::Result<Attachment> {
     })
 }
 
-const COLS: &str = "id, session_id, temae_id, path, caption, created_at";
+const COLS: &str = "id, session_id, temae_id, path, caption, created_at, uid";
 
 impl Db {
     /// Copy `src` into the data dir, create a thumbnail, and record it on `session_id`.
@@ -62,7 +66,7 @@ impl Db {
         let id: i64 = {
             let conn = self.conn();
             conn.execute(
-                "INSERT INTO attachment (session_id, path) VALUES (?1, '')",
+                "INSERT INTO attachment (session_id, path, uid) VALUES (?1, '', lower(hex(randomblob(16))))",
                 [session_id],
             )?;
             conn.last_insert_rowid()
@@ -81,6 +85,7 @@ impl Db {
         let _ = make_thumbnail(&dst, &thumb_path(data_dir, id));
 
         self.conn().execute("UPDATE attachment SET path = ?2 WHERE id = ?1", params![id, rel])?;
+        self.sync_note_attachment(id)?;
         self.attachment_get(id)?.ok_or_else(|| Error::Other("attachment vanished".into()))
     }
 
@@ -100,6 +105,7 @@ impl Db {
 
     pub fn attachment_set_caption(&self, id: i64, caption: Option<&str>) -> Result<()> {
         self.conn().execute("UPDATE attachment SET caption = ?2 WHERE id = ?1", params![id, caption])?;
+        self.sync_note_attachment(id)?;
         Ok(())
     }
 
@@ -109,6 +115,9 @@ impl Db {
         let _ = std::fs::remove_file(data_dir.join(&a.path));
         let _ = std::fs::remove_file(thumb_path(data_dir, id));
         self.conn().execute("DELETE FROM attachment WHERE id = ?1", [id])?;
+        if let Some(uid) = a.uid {
+            self.sync_note(crate::sync::Op::AttachmentDel { uid })?;
+        }
         Ok(())
     }
 
@@ -171,6 +180,7 @@ impl Db {
         };
         let (mut ok, mut bad) = (0, 0);
         for (id, rel) in rows {
+            if rel.is_empty() { continue; } // synced photo whose file has not arrived yet
             match make_thumbnail(&data_dir.join(rel), &thumb_path(data_dir, id)) {
                 Ok(()) => ok += 1,
                 Err(_) => bad += 1,

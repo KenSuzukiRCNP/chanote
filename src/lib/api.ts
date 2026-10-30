@@ -6,6 +6,7 @@ import type {
   AppInfo, Attachment, AxisValues, ByRow, CoverageRow, CrossCell, EventRow, ImportOptions, ImportPreview,
   ImportReport, ImportSource, MonthlyRow, Profile, ProfileInfo, RankRow, ResolvedTemae, Session,
   SessionFilter, SessionSummary, StatsFilter, StatsTotals, Vocab,
+  SyncInfo, SyncReport, DiaryInfo, SyncConflict,
 } from "./types";
 
 type Invoke = <T>(cmd: string, args?: Record<string, unknown>) => Promise<T>;
@@ -63,6 +64,14 @@ export const api = {
   importRead: (source: ImportSource) => invoke<ImportReport>("import_read", { source }),
   importPreview: (source: ImportSource, options: ImportOptions) => invoke<ImportPreview>("import_preview", { source, options }),
   importApply: (source: ImportSource, options: ImportOptions) => invoke<ImportReport>("import_apply", { source, options }),
+  // sync
+  syncStatus: () => invoke<SyncInfo>("sync_status"),
+  syncChooseFolder: (path: string | null) => invoke<[string, DiaryInfo[]]>("sync_choose_folder", { path }),
+  syncSetup: (id: string | null, name: string | null) => invoke<SyncReport>("sync_setup", { id, name }),
+  syncNow: () => invoke<SyncReport>("sync_now"),
+  syncDisable: () => invoke<void>("sync_disable"),
+  syncConflicts: () => invoke<SyncConflict[]>("sync_conflicts"),
+  syncConflictResolve: (id: number, restore: boolean) => invoke<void>("sync_conflict_resolve", { id, restore }),
   // mobile file flows
   exportText: (format: "json" | "csv") => invoke<string>("export_text", { format }),
   exportToDocuments: (name: string, format: "json" | "csv") => invoke<string>("export_to_documents", { name, format }),

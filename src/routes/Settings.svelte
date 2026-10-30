@@ -7,6 +7,7 @@
   import { i18n, t, setLang, type UiLang, type TermMode } from "$lib/i18n.svelte";
   import type { AppInfo, ImportReport, ImportSource, ProfileInfo } from "$lib/types";
   import ImportDialog from "./ImportDialog.svelte";
+  import SyncSettings from "./SyncSettings.svelte";
 
   let info = $state<AppInfo | null>(null);
   let msg = $state<string | null>(null);
@@ -172,6 +173,9 @@
   {/if}
 </div>
 
+<h2 class="text-base font-semibold mt-6 mb-2">{t("sync.title")}</h2>
+<SyncSettings profileName={profiles?.profiles.find((p) => p.id === profiles?.current)?.name ?? "chanote"} />
+
 <h2 class="text-base font-semibold mt-6 mb-2">{t("settings.data")}</h2>
 <div class="card max-w-xl flex flex-col gap-3 text-sm">
   <div class="flex gap-2 flex-wrap">
@@ -195,7 +199,6 @@
     {/if}
   </div>
   <p class="text-xs text-stone-500">{t("settings.backupHelp")}</p>
-  {#if platform.mobile}<p class="text-xs text-stone-500">{t("settings.mobileSyncHelp")}</p>{/if}
   <div class="flex gap-2 items-center pt-2 border-t border-line">
     <button class="btn" onclick={rebuildThumbs}>{t("settings.rebuildThumbs")}</button>
     <span class="text-xs text-stone-500">{t("settings.rebuildThumbsHelp")}</span>

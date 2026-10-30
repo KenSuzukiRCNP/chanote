@@ -51,7 +51,11 @@ npm run tauri android dev                       # emulator or USB device
 npm run tauri android build -- --apk --debug    # installable debug-signed APK
 ```
 
-`src-tauri/Info.ios.plist` is merged into the generated iOS Info.plist. The release
+`src-tauri/Info.ios.plist` is merged into the generated iOS Info.plist.
+`crates/tauri-plugin-chanote-native` holds the small Swift part used on iOS (folder picker
+with a security-scoped bookmark for sync, iCloud download requests); it is built and linked
+automatically by `tauri ios dev/build`. Sync itself is plain Rust in
+`crates/chanote-core/src/sync.rs` (format and rules described at the top of that file). The release
 workflow builds an Android APK (release-signed when the `ANDROID_KEYSTORE_B64`,
 `ANDROID_KEY_ALIAS` and `ANDROID_KEY_PASSWORD` secrets exist, debug-signed otherwise;
 `scripts/android-signing.py` wires the keystore into the generated Gradle file).
@@ -97,4 +101,8 @@ Developer account; the workflow file explains what to add to sign and notarize i
 ## Icon
 
 Source: `assets/icon.png` (1024×1024, transparent outside the circle).
-Regenerate with `npm run tauri icon assets/icon.png` (the android/ios folders can be deleted).
+Regenerate with `npm run tauri icon assets/icon.png --ios-color "#f8f5ef"`. Besides the
+desktop icons this writes `src-tauri/icons/android/` (copied into the Android project by
+`tauri android init`) and, when `src-tauri/gen/apple` exists, the iOS app icon set there.
+iOS icons must be opaque: if Xcode warns about an alpha channel, flatten the PNGs in
+`gen/apple/Assets.xcassets/AppIcon.appiconset` onto the paper colour `#f8f5ef`.

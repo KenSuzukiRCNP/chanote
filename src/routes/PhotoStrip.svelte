@@ -1,9 +1,10 @@
 <script lang="ts">
+  import { syncSoon } from "$lib/sync.svelte";
   // Photos attached to a saved session. Thumbnails come as data URLs from the backend;
   // clicking opens the original in the system viewer.
   import { onMount, onDestroy } from "svelte";
   import { api, isTauri } from "$lib/api";
-  import { pickOpenPaths, openWithSystem, readPickedBytes, baseName } from "$lib/dialogs";
+  import { pickOpenPaths, openWithSystem, readPickedBytes, baseName, heicToJpeg } from "$lib/dialogs";
   import { platform } from "$lib/platform.svelte";
   import { t } from "$lib/i18n.svelte";
   import type { Attachment } from "$lib/types";
@@ -24,11 +25,15 @@
     busy = true;
     try {
       if (platform.mobile) {
-        for (const p of imgs) await api.attachmentAddBytes(sessionId, baseName(p), await readPickedBytes(p));
+        for (const p of imgs) {
+          const f = await heicToJpeg(baseName(p), await readPickedBytes(p));
+          await api.attachmentAddBytes(sessionId, f.name, f.bytes);
+        }
       } else {
         await api.attachmentAdd(sessionId, imgs);
       }
       await load();
+      syncSoon();
     } catch (e) { err = String(e); } finally { busy = false; }
   }
   let err = $state<string | null>(null);
@@ -61,6 +66,7 @@
   async function remove(a: Attachment) {
     await api.attachmentDelete(a.id);
     await load();
+    syncSoon();
   }
   async function open(a: Attachment) {
     if (platform.mobile) return; // no system viewer hand-off on mobile (yet)
@@ -70,6 +76,7 @@
   async function caption(a: Attachment, v: string) {
     a.caption = v || null;
     await api.attachmentCaption(a.id, a.caption);
+    syncSoon();
   }
 </script>
 

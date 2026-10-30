@@ -146,7 +146,9 @@ mod tests {
             "#).unwrap();
         }
         let db = crate::Db::open(&path).unwrap();
-        assert_eq!(db.schema_version().unwrap(), 4);
+        assert_eq!(db.schema_version().unwrap(), 5);
+        // 005: every record got a global id
+        assert!(db.session_get(1).unwrap().unwrap().uid.is_some());
         // 004: kind → form / practice
         let s1 = db.session_get(1).unwrap().unwrap();
         assert_eq!((s1.form.as_str(), s1.practice), ("?", false));
